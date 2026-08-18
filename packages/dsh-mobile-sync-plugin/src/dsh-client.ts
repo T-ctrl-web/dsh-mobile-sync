@@ -1,6 +1,6 @@
 // src/dsh-client.ts —— DSH 网关客户端（RPC 调用 + 事件/历史归一化）
-// 从中继版本迁移，适配插件 ctx：基址取自 ctx.webServer 的端口而非固定 127.0.0.1:3080
-// RPC 信封：{type:'client-request', rpcId, method, payload}；响应取 result.value
+// 适配 DSH 0.1.0-rc.7 的 ApiProxy：结构化命名空间（apiProxy.sessions.list 等），
+// 统一 unary 信封 { rpcId, payload } → { rpcId, result: { ok, value } }
 
 // ApiProxy 的精确类型随 DSH 版本变化，用 any 兜底
 export type ApiProxy = any;
@@ -18,9 +18,18 @@ export function isoTime(t: unknown): string {
 }
 
 // ---- 核心 RPC（通过 ApiProxy 服务代理到 DSH host）----
-// apiProxy.callRpc(method, payload) 返回 { ok, value, error }
+// 把 'session.list' 这类方法名映射到 apiProxy.sessions.list 结构化调用
+// 注意 DSH 命名空间是复数（sessions），插件内部约定用单数（session.*）
+const DOMAIN_ALIAS: Record<string, string> = { session: 'sessions' };
 export async function fetchRpc(apiProxy: ApiProxy, method: string, payload: Record<string, unknown> = {}): Promise<any> {
-  const result = await apiProxy.callRpc(method, payload);
+  const dot = method.indexOf('.');
+  const domain = method.slice(0, dot);
+  const action = method.slice(dot + 1);
+  const ns = DOMAIN_ALIAS[domain] ?? domain;
+  const fn = (apiProxy as any)?.[ns]?.[action];
+  if (typeof fn !== 'function') throw new Error(method + ' 不在 DSH apiProxy 中');
+  const resp = await fn({ rpcId: rpcId(), payload });
+  const result = resp?.result;
   if (!result?.ok) throw new Error(method + ' 失败: ' + JSON.stringify(result?.error || {}).slice(0, 200));
   return result.value;
 }
@@ -40,11 +49,33 @@ export function promptSession(apiProxy: ApiProxy, sessionId: string, content: an
 export function cancelSession(apiProxy: ApiProxy, sessionId: string): Promise<void> {
   return fetchRpc(apiProxy, 'session.cancel', { sessionId }).catch(() => {});
 }
-export function selectModel(apiProxy: ApiProxy, sessionId: string, model: string): Promise<void> {
-  return fetchRpc(apiProxy, 'session.selectModel', { sessionId, model }).then(() => {});
+// DSH 的 selectModel 需要 provider + model 两个字段：先从模型目录解析 model id 对应的 provider
+export async function selectModel(apiProxy: ApiProxy, sessionId: string, model: string): Promise<void> {
+  let provider = '';
+  try {
+    const cat = await fetchRpc(apiProxy, 'session.models', { sessionId });
+    provider = cat?.current?.provider || '';
+    if (!provider) {
+      for (const g of cat?.groups || []) {
+        if ((g.models || []).some((m: any) => String(m.id || m.modelId || m.name) === model)) { provider = g.id; break; }
+      }
+    }
+  } catch { /* 目录不可用时退回空 provider */ }
+  await fetchRpc(apiProxy, 'session.selectModel', { sessionId, provider, model }).then(() => {});
 }
+// 模型目录：DSH 返回 SessionModels{current,groups,failures}，展平成手机端期望的 items 列表
 export function listModels(apiProxy: ApiProxy, sessionId: string): Promise<any> {
-  return fetchRpc(apiProxy, 'session.models', { sessionId }).catch(() => ({ items: [], groups: [] }));
+  return fetchRpc(apiProxy, 'session.models', { sessionId })
+    .then((v: any) => {
+      const items: any[] = [];
+      for (const g of v?.groups || []) {
+        for (const m of g.models || []) {
+          items.push({ id: m.id || m.modelId || m.name, name: m.name || m.id, provider: g.id || g.name });
+        }
+      }
+      return { items, current: v?.current || null };
+    })
+    .catch(() => ({ items: [], current: null }));
 }
 
 // ---- 工具：从 tool/call 参数 JSON 提取一行摘要 ----

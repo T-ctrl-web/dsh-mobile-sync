@@ -188,14 +188,15 @@ export function makeMobileApiRoutes(
 
   // 对话历史
   const historyRoute: WebRoute = {
-    kind: 'prefix', path: '/m/api/sessions/', handler: async (req, res) => {
+    kind: 'prefix', path: '/m/api/sessions', handler: async (req, res) => {
       if (!requireMobile(req, res)) return;
       const url = new URL(req.url || '', 'http://x');
       const parts = url.pathname.split('/').filter(Boolean);
       // /m/api/sessions/:id/history | /prompt | /cancel | /model | /permission | /events | /events.stream
+      // 从尾部取 id 和 action：prefix 前的段数可能变化（/m 前缀），用绝对索引不可靠
       if (parts.length < 4) return writeJson(res, 404, { error: '路径不完整' });
-      const sid = parts[2];
-      const action = parts[3];
+      const sid = parts[parts.length - 2];
+      const action = parts[parts.length - 1];
 
       if (action === 'history' && req.method === 'GET') {
         try {
@@ -258,7 +259,7 @@ export function makeMobileApiRoutes(
     },
   };
   const approveRoute: WebRoute = {
-    kind: 'prefix', path: '/m/api/approvals/', handler: async (req, res) => {
+    kind: 'prefix', path: '/m/api/approvals', handler: async (req, res) => {
       if (!requireMethod(req, res, 'POST') || !requireMobile(req, res)) return;
       const url = new URL(req.url || '', 'http://x');
       const parts = url.pathname.split('/').filter(Boolean);
@@ -268,7 +269,7 @@ export function makeMobileApiRoutes(
     },
   };
   const questionRoute: WebRoute = {
-    kind: 'prefix', path: '/m/api/questions/', handler: async (req, res) => {
+    kind: 'prefix', path: '/m/api/questions', handler: async (req, res) => {
       if (!requireMethod(req, res, 'POST') || !requireMobile(req, res)) return;
       const url = new URL(req.url || '', 'http://x');
       const parts = url.pathname.split('/').filter(Boolean);

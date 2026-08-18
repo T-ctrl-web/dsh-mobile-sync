@@ -223,12 +223,26 @@ function cryptoRandom() {
 }
 //#endregion
 //#region src/dsh-client.ts
+let rpcCounter = 0;
+function rpcId() {
+	return "ms-rpc-" + (rpcCounter++).toString(36) + "-" + Date.now().toString(36);
+}
 function isoTime(t) {
 	const n = Number(t);
 	return new Date(Number.isFinite(n) && n > 0 ? n : Date.now()).toISOString();
 }
+const DOMAIN_ALIAS = { session: "sessions" };
 async function fetchRpc(apiProxy, method, payload = {}) {
-	const result = await apiProxy.callRpc(method, payload);
+	const dot = method.indexOf(".");
+	const domain = method.slice(0, dot);
+	const action = method.slice(dot + 1);
+	const ns = DOMAIN_ALIAS[domain] ?? domain;
+	const fn = apiProxy?.[ns]?.[action];
+	if (typeof fn !== "function") throw new Error(method + " 不在 DSH apiProxy 中");
+	const result = (await fn({
+		rpcId: rpcId(),
+		payload
+	}))?.result;
 	if (!result?.ok) throw new Error(method + " 失败: " + JSON.stringify(result?.error || {}).slice(0, 200));
 	return result.value;
 }
@@ -253,16 +267,39 @@ function promptSession(apiProxy, sessionId, content) {
 function cancelSession(apiProxy, sessionId) {
 	return fetchRpc(apiProxy, "session.cancel", { sessionId }).catch(() => {});
 }
-function selectModel(apiProxy, sessionId, model) {
-	return fetchRpc(apiProxy, "session.selectModel", {
+async function selectModel(apiProxy, sessionId, model) {
+	let provider = "";
+	try {
+		const cat = await fetchRpc(apiProxy, "session.models", { sessionId });
+		provider = cat?.current?.provider || "";
+		if (!provider) {
+			for (const g of cat?.groups || []) if ((g.models || []).some((m) => String(m.id || m.modelId || m.name) === model)) {
+				provider = g.id;
+				break;
+			}
+		}
+	} catch {}
+	await fetchRpc(apiProxy, "session.selectModel", {
 		sessionId,
+		provider,
 		model
 	}).then(() => {});
 }
 function listModels(apiProxy, sessionId) {
-	return fetchRpc(apiProxy, "session.models", { sessionId }).catch(() => ({
+	return fetchRpc(apiProxy, "session.models", { sessionId }).then((v) => {
+		const items = [];
+		for (const g of v?.groups || []) for (const m of g.models || []) items.push({
+			id: m.id || m.modelId || m.name,
+			name: m.name || m.id,
+			provider: g.id || g.name
+		});
+		return {
+			items,
+			current: v?.current || null
+		};
+	}).catch(() => ({
 		items: [],
-		groups: []
+		current: null
 	}));
 }
 function summarizeArgs(argsJson) {
@@ -913,14 +950,14 @@ function makeMobileApiRoutes(pairing, eventStore, apiProxy, defaultCwd, sync) {
 		},
 		{
 			kind: "prefix",
-			path: "/m/api/sessions/",
+			path: "/m/api/sessions",
 			handler: async (req, res) => {
 				if (!requireMobile(req, res)) return;
 				const url = new URL(req.url || "", "http://x");
 				const parts = url.pathname.split("/").filter(Boolean);
 				if (parts.length < 4) return writeJson(res, 404, { error: "路径不完整" });
-				const sid = parts[2];
-				const action = parts[3];
+				const sid = parts[parts.length - 2];
+				const action = parts[parts.length - 1];
 				if (action === "history" && req.method === "GET") try {
 					const events = await getHistory(apiProxy, sid);
 					writeJson(res, 200, {
@@ -1017,7 +1054,7 @@ function makeMobileApiRoutes(pairing, eventStore, apiProxy, defaultCwd, sync) {
 		},
 		{
 			kind: "prefix",
-			path: "/m/api/approvals/",
+			path: "/m/api/approvals",
 			handler: async (req, res) => {
 				if (!requireMethod(req, res, "POST") || !requireMobile(req, res)) return;
 				const parts = new URL(req.url || "", "http://x").pathname.split("/").filter(Boolean);
@@ -1031,7 +1068,7 @@ function makeMobileApiRoutes(pairing, eventStore, apiProxy, defaultCwd, sync) {
 		},
 		{
 			kind: "prefix",
-			path: "/m/api/questions/",
+			path: "/m/api/questions",
 			handler: async (req, res) => {
 				if (!requireMethod(req, res, "POST") || !requireMobile(req, res)) return;
 				const parts = new URL(req.url || "", "http://x").pathname.split("/").filter(Boolean);

@@ -128,15 +128,15 @@ export const FooterRemoteEntry: FC<{ wide?: boolean }> = ({ wide }) => {
         }} />
       </button>
 
-      {/* 配对面板 */}
+      {/* 配对面板：fixed 定位到视口右下角，彻底规避侧边栏容器的溢出裁剪，保证窗口内可见 */}
       {open && (
         <div style={{
-          position: 'absolute', bottom: '100%', right: 0, marginBottom: 8,
-          width: wide ? 380 : 320, background: 'var(--surface, #1a1a1f)',
+          position: 'fixed', right: 12, bottom: 56,
+          width: wide ? 360 : 300, background: 'var(--surface, #1a1a1f)',
           border: '1px solid var(--border, #333)', borderRadius: 12,
-          padding: 16, boxShadow: '0 8px 32px rgba(0,0,0,.4)',
-          zIndex: 100, fontSize: 14, color: 'var(--text, #ececec)',
-          maxHeight: '70vh', overflowY: 'auto',
+          padding: 16, boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+          zIndex: 9999, fontSize: 14, color: 'var(--text, #ececec)',
+          maxHeight: 'calc(100vh - 80px)', overflowY: 'auto', overflowX: 'hidden',
         }}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>移动端远程控制</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #9a9a9a)', marginBottom: 12 }}>
