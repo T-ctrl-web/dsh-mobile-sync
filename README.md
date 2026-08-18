@@ -140,6 +140,8 @@ netsh advfirewall firewall add rule name="dsh-mobile" dir=in action=allow protoc
 
 ## 外网远程（不同 WiFi）
 
+> ⚠️ **以下所有外网方案均未经实测**（开发环境为同一局域网）。网络环境各不相同（运营商、防火墙、IPv6 支持等），**有条件请自行测试验证**后再用于生产环境。
+
 > **国内（中国大陆）网络环境**：Tailscale 官网与 cloudflared 生成的 trycloudflare.com 域名通常无法访问。可用的替代方案：
 > - **IPv6 直连**（零成本）：若宽带支持公网 IPv6，在管理员 PowerShell 执行 `netsh interface portproxy add v6tov4 listenport=3080 listenaddress=:: connectport=3080 connectaddress=127.0.0.1`，手机用 `http://[电脑IPv6地址]:3080/m/` 访问（需手机网络支持 IPv6，`ipconfig` 查 `2408:` 开头的地址）
 > - **cpolar**（国内内网穿透）：官网下载 cpolar → `cpolar http 3080` → 得到 `.cpolar.top` 域名，手机任意网络访问（SSE 可能降级轮询）
@@ -234,6 +236,26 @@ node agent.mjs                               # 启动中继（端口 8788）
     requirePairingForLan: true   # 非环回请求需配对
     publicBaseUrl: http://192.168.x.x:3080   # QR 码地址（换网络记得改）
 ```
+
+## 测试状态说明
+
+> 以下为当前项目的**真实测试状态**，请据此评估使用风险。
+
+**✅ 已验证（局域网环境，Windows + DSH 0.1.0-rc.7）**
+- 插件构建、安装、加载（`dsh plugin add` / 侧边栏手机图标）
+- 手机扫码配对 + Cookie 鉴权（未配对 403）
+- 会话列表 / 工作区列表 / 对话历史 / 模型列表 / 事件增量回放
+- 双向同步桥（PC 端当前会话实时上报手机端）
+- 0.0.0.0 监听下局域网手机直连
+
+**⚠️ 未经真机完整验证（有条件请自行测试）**
+- 发消息 / 流式回复、审批卡片、提问卡片、工具卡片（API 层可用，未在真实手机上跑通完整交互）
+- 模型切换（含 provider 解析）、权限模式切换、终端、文件浏览
+- 离线补同步的真实断线重连场景
+- 外网访问（Tailscale / Cloudflare / cpolar / IPv6 直连等全部方案）
+- 非 Windows 平台（macOS / Linux）与 DSH 其他版本
+
+如发现问题欢迎提 Issue 或 PR。
 
 ## 安全说明
 
