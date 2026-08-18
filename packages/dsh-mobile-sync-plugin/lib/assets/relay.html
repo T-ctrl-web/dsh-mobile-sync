@@ -129,6 +129,7 @@ const LS = {
 let state = {
   base: LS.get('base',''),
   token: LS.get('token',''),
+  ready: false,        // 已确认可访问（插件 Cookie 模式自动探测通过 / 独立中继登录成功）
   view: 'chat',
   workspace: null,
   session: null,       // {sessionId, title}
@@ -146,22 +147,30 @@ let state = {
 const app = document.getElementById('app');
 
 // ============ API ============
+// 双模式：独立中继填 base+token（Bearer/query 鉴权）；插件模式 base 为空用相对路径（Cookie 鉴权）
 async function api(path, opts={}) {
   const headers = {'content-type':'application/json', ...(state.token?{authorization:'Bearer '+state.token}:{})};
-  const r = await fetch(state.base.replace(/\/+$/,'')+path, {...opts, headers});
+  const url = state.base ? state.base.replace(/\/+$/,'')+path : path;
+  const r = await fetch(url, {...opts, headers});
   if(!r.ok && r.status===401) { alert('token 无效或已过期'); return null; }
   const j = await r.json().catch(()=>({error:'非 JSON 响应'}));
   if(j.error) throw new Error(j.error);
   return j;
 }
-function sseUrl(path){ const b=state.base.replace(/\/+$/,''); return b+path+(path.includes('?')?'&':'?')+'token='+encodeURIComponent(state.token); }
+function sseUrl(path){
+  const b=state.base ? state.base.replace(/\/+$/,'') : '';
+  const sep=path.includes('?')?'&':'?';
+  // 独立中继模式：SSE 无法带自定义 header，token 走查询参数；插件模式靠同源 Cookie
+  return state.token ? b+path+sep+'token='+encodeURIComponent(state.token) : b+path;
+}
 
 // ============ 双向同步（PC ↔ 手机 UI 状态镜像）============
 // 手机端状态上报：切换会话 / 切模型 / 切权限 / 发消息时调用，host 再广播给 PC 端
 function reportMobileState(patch){
-  if(!state.base) return;
+  if(!state.ready) return;
   try{
-    fetch(state.base.replace(/\/+$/,'')+'/m/api/sync/mobile-state',{
+    const url=state.base ? state.base.replace(/\/+$/,'')+'/m/api/sync/mobile-state' : '/m/api/sync/mobile-state';
+    fetch(url,{
       method:'POST',
       headers:{'content-type':'application/json', ...(state.token?{authorization:'Bearer '+state.token}:{})},
       body:JSON.stringify(patch),
@@ -175,7 +184,7 @@ function reportActiveSession(){
 }
 // 订阅 PC 端状态流（/m/api/sync SSE；SSE 被阻断时降级为 30s 轮询）
 function startSync(){
-  if(!state.base||!state.token) return;
+  if(!state.ready) return;
   if(state.syncES){ state.syncES.close(); state.syncES=null; }
   let es=null;
   try{ es=new EventSource(sseUrl('/m/api/sync')); }catch{ es=null; }
@@ -248,7 +257,7 @@ function md(text){
 
 // ============ 视图渲染 ============
 function render(){
-  if(!state.base || !state.token) return viewLogin();
+  if(!state.ready) return viewLogin();
   if(state.view==='files') return viewFiles('');
   if(state.view==='terminal') return viewTerminal();
   if(!state.session) return viewSessions();
@@ -263,23 +272,52 @@ function viewLogin(){
     <div class="sub">手机远程控制你的电脑 Agent</div>
     <div>
       <label>服务器地址</label>
-      <input id="inBase" placeholder="http://192.168.x.x:8788" value="${esc(state.base)}">
+      <input id="inBase" placeholder="http://192.168.x.x:8788 或留空（插件模式）" value="${esc(state.base)}">
     </div>
     <div>
       <label>访问令牌 Token</label>
-      <input id="inToken" placeholder="config.json 中设置的 token" value="${esc(state.token)}">
+      <input id="inToken" placeholder="独立中继模式需要；插件模式留空" value="${esc(state.token)}">
     </div>
     <button class="btn" id="btnConn">连接</button>
-    <div class="sub">提示：电脑需先运行 <span class="mono">dsh web</span> 与 <span class="mono">node agent.mjs</span></div>
+    <div class="sub" id="loginHint">检测中…</div>
   </div>`;
+  // 自动探测：插件模式（同源 + 已配对 Cookie）→ 直接进入移动端
+  probePluginMode();
   document.getElementById('btnConn').onclick=async()=>{
     const b=document.getElementById('inBase').value.trim().replace(/\/+$/,'');
     const t=document.getElementById('inToken').value.trim();
+    state.base=b;state.token=t;
+    if(!b){
+      // 插件模式：相对路径 + Cookie 鉴权
+      try{
+        const j=await api('/m/api/workspaces');
+        if(j===null){ return; }
+        state.ready=true;LS.set('base','');LS.set('token','');state.view='chat';render();startSync();
+      }catch(e){ alert('连接失败：'+e.message+'（插件模式请先扫码配对）'); }
+      return;
+    }
     if(!b){alert('请填写服务器地址');return}
-    state.base=b;state.token=t;LS.set('base',b);LS.set('token',t);
-    try{ const h=await api('/health'); if(h){ state.view='chat'; render(); } }
+    LS.set('base',b);LS.set('token',t);
+    try{ const h=await api('/health'); if(h){ state.ready=true; state.view='chat'; render(); startSync(); } }
     catch(e){ alert('连接失败：'+e.message); }
   };
+}
+
+// 插件模式探测：同源 /m/api/workspaces 返回 200 = 已配对（Cookie 有效），跳过登录
+async function probePluginMode(){
+  const hint=document.getElementById('loginHint');
+  try{
+    const r=await fetch('/m/api/workspaces',{headers:{'content-type':'application/json'}});
+    if(r.status===200){
+      state.base='';state.token='';state.ready=true;
+      LS.set('base','');LS.set('token','');
+      state.view='chat';render();startSync();
+    }else if(hint){
+      hint.textContent='未检测到配对（插件模式需先扫码配对，或填独立中继地址+token）';
+    }
+  }catch(e){
+    if(hint) hint.textContent='未检测到本地服务（插件模式）或未填独立中继地址';
+  }
 }
 
 // ---- 会话/工作区列表 ----
@@ -667,7 +705,6 @@ function bindTabbar(filesView=false){
 
 // ============ 启动 ============
 render();
-startSync();
 window.addEventListener('beforeunload',()=>{stopStream();stopSync();});
 </script>
 </body>
