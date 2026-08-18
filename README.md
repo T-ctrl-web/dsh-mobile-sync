@@ -140,7 +140,12 @@ netsh advfirewall firewall add rule name="dsh-mobile" dir=in action=allow protoc
 
 ## 外网远程（不同 WiFi）
 
-### Tailscale（最推荐）
+> **国内（中国大陆）网络环境**：Tailscale 官网与 cloudflared 生成的 trycloudflare.com 域名通常无法访问。可用的替代方案：
+> - **IPv6 直连**（零成本）：若宽带支持公网 IPv6，在管理员 PowerShell 执行 `netsh interface portproxy add v6tov4 listenport=3080 listenaddress=:: connectport=3080 connectaddress=127.0.0.1`，手机用 `http://[电脑IPv6地址]:3080/m/` 访问（需手机网络支持 IPv6，`ipconfig` 查 `2408:` 开头的地址）
+> - **cpolar**（国内内网穿透）：官网下载 cpolar → `cpolar http 3080` → 得到 `.cpolar.top` 域名，手机任意网络访问（SSE 可能降级轮询）
+> - **EasyTier**（国产组网，Tailscale 替代）：电脑与手机安装客户端并组网后直连
+
+### Tailscale（海外/可访问环境推荐）
 
 ```powershell
 # 电脑和手机各装 Tailscale，登录同一账号
