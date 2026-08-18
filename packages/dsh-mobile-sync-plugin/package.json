@@ -23,10 +23,14 @@
     "cordis.patch.yml"
   ],
   "scripts": {
-    "build": "tsc --noEmit && tsdown",
+    "build": "tsc --noEmit && tsdown && node scripts/wrap-client.mjs",
     "dev": "tsc --noEmit --watch"
   },
   "dsh": {
+    "bundles": {
+      "host": "./lib/index.js",
+      "client": "./lib/client.js"
+    },
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
