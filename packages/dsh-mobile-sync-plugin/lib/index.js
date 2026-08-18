@@ -880,8 +880,8 @@ function makeMobileApiRoutes(pairing, eventStore, apiProxy, defaultCwd) {
 			kind: "exact",
 			path: "/m/api/sessions",
 			handler: async (req, res) => {
-				if (!requireMethod(req, res, "GET") || !requireMobile(req, res)) return;
-				try {
+				if (!requireMobile(req, res)) return;
+				if (req.method === "GET") try {
 					writeJson(res, 200, { items: (await listSessions(apiProxy)).map((s) => {
 						const proj = s.projections?.values || {};
 						return {
@@ -898,19 +898,14 @@ function makeMobileApiRoutes(pairing, eventStore, apiProxy, defaultCwd) {
 				} catch (e) {
 					writeJson(res, 502, { error: e.message });
 				}
-			}
-		},
-		{
-			kind: "exact",
-			path: "/m/api/sessions",
-			handler: async (req, res) => {
-				if (!requireMethod(req, res, "POST") || !requireMobile(req, res)) return;
-				const b = await readJsonBody(req);
-				try {
-					writeJson(res, 200, { sessionId: await createSession(apiProxy, String(b.cwd || defaultCwd), String(b.agentPreset || "standard")) });
-				} catch (e) {
-					writeJson(res, 502, { error: e.message });
-				}
+				else if (req.method === "POST") {
+					const b = await readJsonBody(req);
+					try {
+						writeJson(res, 200, { sessionId: await createSession(apiProxy, String(b.cwd || defaultCwd), String(b.agentPreset || "standard")) });
+					} catch (e) {
+						writeJson(res, 502, { error: e.message });
+					}
+				} else writeJson(res, 405, { error: "Method not allowed" });
 			}
 		},
 		{

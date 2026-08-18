@@ -153,33 +153,31 @@ export function makeMobileApiRoutes(
     },
   };
 
-  // 会话列表
+  // 会话列表 + 新建会话（合并为一个路由，按 method 分发，避免 duplicate route）
   const sessionsRoute: WebRoute = {
     kind: 'exact', path: '/m/api/sessions', handler: async (req, res) => {
-      if (!requireMethod(req, res, 'GET') || !requireMobile(req, res)) return;
-      try {
-        const items = await listSessions(apiProxy);
-        writeJson(res, 200, { items: items.map((s: any) => {
-          const proj = (s.projections?.values) || {};
-          return {
-            sessionId: s.sessionId, cwd: s.cwd, title: proj.title || baseName(s.cwd),
-            updatedAt: s.updatedAt, running: !!s.running, blank: !!s.blank,
-            permissions: proj.permissions, todos: Array.isArray(proj.todos) ? proj.todos : undefined,
-          };
-        }) });
-      } catch (e: any) { writeJson(res, 502, { error: e.message }); }
-    },
-  };
-
-  // 新建会话
-  const createSessionRoute: WebRoute = {
-    kind: 'exact', path: '/m/api/sessions', handler: async (req, res) => {
-      if (!requireMethod(req, res, 'POST') || !requireMobile(req, res)) return;
-      const b = await readJsonBody(req);
-      try {
-        const sid = await createSession(apiProxy, String(b.cwd || defaultCwd), String(b.agentPreset || 'standard'));
-        writeJson(res, 200, { sessionId: sid });
-      } catch (e: any) { writeJson(res, 502, { error: e.message }); }
+      if (!requireMobile(req, res)) return;
+      if (req.method === 'GET') {
+        try {
+          const items = await listSessions(apiProxy);
+          writeJson(res, 200, { items: items.map((s: any) => {
+            const proj = (s.projections?.values) || {};
+            return {
+              sessionId: s.sessionId, cwd: s.cwd, title: proj.title || baseName(s.cwd),
+              updatedAt: s.updatedAt, running: !!s.running, blank: !!s.blank,
+              permissions: proj.permissions, todos: Array.isArray(proj.todos) ? proj.todos : undefined,
+            };
+          }) });
+        } catch (e: any) { writeJson(res, 502, { error: e.message }); }
+      } else if (req.method === 'POST') {
+        const b = await readJsonBody(req);
+        try {
+          const sid = await createSession(apiProxy, String(b.cwd || defaultCwd), String(b.agentPreset || 'standard'));
+          writeJson(res, 200, { sessionId: sid });
+        } catch (e: any) { writeJson(res, 502, { error: e.message }); }
+      } else {
+        writeJson(res, 405, { error: 'Method not allowed' });
+      }
     },
   };
 
@@ -322,7 +320,7 @@ export function makeMobileApiRoutes(
   };
 
   return [
-    rpcProxyRoute, workspacesRoute, sessionsRoute, createSessionRoute,
+    rpcProxyRoute, workspacesRoute, sessionsRoute,
     historyRoute, pendingRoute, approveRoute, questionRoute,
     terminalRoute, filesRoute, fileRoute, heartbeatRoute,
   ];
