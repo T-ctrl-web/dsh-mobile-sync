@@ -1,0 +1,10 @@
+{
+  "_comment": "复制为 config.json 后按需修改。token 为手机访问中继的鉴权令牌（自拟，勿泄露）。",
+  "port": 8788,
+  "token": "please-change-this-token",
+  "dshBaseUrl": "http://127.0.0.1:3080",
+  "workspace": "",
+  "_workspaceComment": "workspace 留空则用启动目录；填绝对路径则手机端默认该工作区",
+  "allowInternet": true,
+  "_allowInternetComment": "true 时绑定 0.0.0.0（手机经局域网/隧道访问）；false 仅 127.0.0.1"
+}

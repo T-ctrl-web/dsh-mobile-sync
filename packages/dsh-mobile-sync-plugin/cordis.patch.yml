@@ -1,0 +1,8 @@
+# DSH Mobile Sync — 双面 Cordis 插件
+# 一行插入：host 半边（配对 token + 设备会话 + /api/pair 路由 + 事件中继）
+# + client 半边（侧边栏手机图标 + 配对面板 + QR 码）
+# host 走 main (lib/index.js)，client 走 exports["./client"] (lib/client.js)
+# dsh.client 声明触发 client-modules 扫描器自动加载浏览器半边
+- insert:
+  - id: mobile-sync
+    name: dsh-mobile-sync

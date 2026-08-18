@@ -1,0 +1,16 @@
+{
+  "name": "dsh-mobile-sync",
+  "version": "1.0.0",
+  "description": "手机远程控制 DeepSeek Harness (dsh) 的中继插件——零依赖，clone 即跑",
+  "type": "module",
+  "main": "agent.mjs",
+  "bin": { "dsh-mobile-sync": "agent.mjs" },
+  "scripts": {
+    "start": "node agent.mjs",
+    "lan": "node agent.mjs --mode=lan",
+    "dev": "node agent.mjs --mode=lan --port=8788"
+  },
+  "engines": { "node": ">=22" },
+  "license": "MIT",
+  "keywords": ["deepseek-harness", "dsh", "mobile", "remote", "relay", "plugin"]
+}

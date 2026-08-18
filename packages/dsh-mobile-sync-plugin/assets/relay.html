@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#191919">
+<title>DSH 手机远程</title>
+<style>
+:root[data-theme="dark"]{--bg:#191919;--bg2:#232323;--bg3:#2b2b2b;--border:#333;--text:#ececec;--muted:#9a9a9a;--accent:#4a90d9;--accent2:#6b5ce7;--ok:#4caf50;--warn:#f0a020;--err:#e0533d;--bubble-user:#2a3a2a;--bubble-bot:#232323}
+:root[data-theme="light"]{--bg:#fafafa;--bg2:#fff;--bg3:#eee;--border:#ddd;--text:#222;--muted:#777;--accent:#2a6fb0;--accent2:#5b4cd7;--ok:#2e8b3d;--warn:#c08010;--err:#c0392b;--bubble-user:#e3f2e3;--bubble-bot:#fff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.55 -apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC",sans-serif;overflow:hidden}
+button{font:inherit;color:var(--text);background:none;border:none;cursor:pointer;padding:0}
+input,textarea{font:inherit;color:inherit;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;width:100%}
+a{color:var(--accent)}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:560px;margin:0 auto;position:relative}
+.topbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--border);min-height:48px;position:sticky;top:0;z-index:5}
+.topbar .back{font-size:22px;line-height:1;padding:4px}
+.topbar h1{font-size:15px;font-weight:600;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tabbar{display:flex;background:var(--bg2);border-top:1px solid var(--border)}
+.tabbar button{flex:1;padding:8px 0 10px;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabbar button.on{color:var(--accent)}
+.tabbar .ico{font-size:18px;line-height:1}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.chat{padding:10px 12px 16px}
+.msg{margin-bottom:12px}
+.msg .role{font-size:11px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+.bubble{background:var(--bubble-bot);border:1px solid var(--border);border-radius:10px;padding:10px 12px;white-space:pre-wrap;word-break:break-word}
+.bubble.user{background:var(--bubble-user)}
+.bubble pre{background:#0d0d0d;color:#ddd;border-radius:8px;padding:10px;overflow-x:auto;margin:6px 0;font-size:12px}
+.bubble code{font-family:ui-monospace,monospace;font-size:13px}
+.bubble p{margin:0 0 6px}.bubble p:last-child{margin:0}
+.bubble strong{font-weight:600}.bubble ul,.bubble ol{margin:4px 0;padding-left:20px}
+.think{font-size:13px;color:var(--muted);border-left:3px solid var(--border);padding:4px 10px;margin:6px 0}
+.toolcard{border:1px solid var(--border);border-radius:10px;margin:8px 0;overflow:hidden}
+.toolcard .tc-head{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg3)}
+.toolcard .tc-name{font-family:monospace;font-size:13px;font-weight:600}
+.toolcard .tc-st{font-size:11px;color:var(--muted);margin-left:auto}
+.toolcard .tc-st.done{color:var(--ok)}.toolcard .tc-st.fail{color:var(--err)}
+.toolcard .tc-body{padding:8px 10px;font-size:12px;font-family:monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted);border-top:1px solid var(--border)}
+.stream-cur{display:inline-block;width:7px;height:15px;background:var(--accent);vertical-align:-2px;animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:0}}
+.pending{border:1px solid var(--warn);border-radius:10px;margin:8px 0;background:var(--bg2);padding:10px 12px}
+.pending .pt{font-size:13px;font-weight:600;color:var(--warn);margin-bottom:6px}
+.pending .pr{font-size:13px;color:var(--muted);margin-bottom:8px;white-space:pre-wrap;word-break:break-word}
+.pending .acts{display:flex;gap:8px}
+.pending .acts button{flex:1;padding:8px;border-radius:8px;font-weight:600;font-size:13px}
+.pending .allow{background:var(--ok);color:#fff}.pending .deny{background:var(--err);color:#fff}
+.qopt{display:block;padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px;width:100%}
+.composer{display:flex;gap:8px;padding:8px 12px;background:var(--bg2);border-top:1px solid var(--border);align-items:flex-end}
+.composer textarea{resize:none;max-height:120px;min-height:40px}
+.composer .send{background:var(--accent);color:#fff;border-radius:8px;width:40px;height:40px;font-size:18px;flex-shrink:0;border:none}
+.chips{display:flex;gap:6px;padding:4px 12px 6px;background:var(--bg2);border-top:1px solid var(--border);flex-wrap:wrap}
+.chip{font-size:11px;padding:4px 8px;border-radius:8px;background:var(--bg3);color:var(--muted);border:1px solid var(--border);cursor:pointer}
+.chip.act{color:var(--accent);border-color:var(--accent)}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg2);width:100%;max-width:560px;border-radius:14px 14px 0 0;max-height:70vh;overflow-y:auto;padding:8px 0 20px}
+.sheet h3{padding:12px 16px;margin:0;border-bottom:1px solid var(--border)}
+.sheet .grp{font-size:11px;color:var(--muted);padding:8px 16px 4px;text-transform:uppercase;letter-spacing:.5px}
+.sheet .opt{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;cursor:pointer}
+.sheet .opt.cur{color:var(--accent)}
+.sheet .opt .nm{font-weight:500;flex:1}.sheet .opt .id{font-size:11px;color:var(--muted);font-family:monospace}
+.term-out{font-family:monospace;font-size:12px;white-space:pre-wrap;word-break:break-word;padding:10px 12px;background:#000;color:#cfcfcf;min-height:120px}
+.file-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer}
+.file-item .ic{font-size:16px}.file-item .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.code-view{font-family:monospace;font-size:12px;white-space:pre;padding:10px 12px;overflow-x:auto}
+.empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px}
+.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-right:4px}
+.conn-dot.sse{background:var(--ok);box-shadow:0 0 4px var(--ok)}
+.conn-dot.poll{background:var(--warn)}
+.conn-dot.off{background:var(--muted)}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg2);cursor:pointer}
+.row .ttl{font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{font-size:11px;color:var(--muted)}
+.badge{font-size:10px;padding:2px 6px;border-radius:8px;background:var(--bg3);color:var(--muted)}
+.badge.run{background:var(--ok);color:#fff}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// 插件模式：API 路径以 /m/ 为前缀，配对 cookie 自动鉴权，无需手动输入地址/token
+const API_BASE = '/m';
+const LS = {get:(k,d)=>{try{return JSON.parse(localStorage.getItem('dms_'+k))??d}catch{return d}},set:(k,v)=>localStorage.setItem('dms_'+k,JSON.stringify(v))};
+let state = {view:'chat',session:null,events:[],lastSeq:0,sse:null,messages:[],pending:[],toolCards:new Map(),connMode:'off',pollTimer:null,sseFailCount:0,model:null};
+const app = document.getElementById('app');
+const SSE_FAIL_THRESHOLD=3, POLL_INTERVAL_MS=1500;
+
+// 心跳：页面打开时立即发一次（恢复在线状态），之后每 30s 发一次
+function sendHeartbeat(){fetch(API_BASE+'/api/heartbeat',{method:'POST'}).catch(()=>{})}
+sendHeartbeat();
+setInterval(sendHeartbeat,30000);
+// 页面从后台切回前台时立即发心跳
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')sendHeartbeat()});
+
+async function api(path,opts={}){const r=await fetch(API_BASE+path,{...opts,headers:{'content-type':'application/json',...(opts.headers||{})}});
+if(r.status===403){app.innerHTML='<div class="empty"><p>设备未配对或配对已过期</p><p>请在电脑端 dsh web 侧边栏点击手机图标，刷新二维码后重新扫码</p></div>';throw new Error('未配对');}
+const j=await r.json().catch(()=>({error:'非JSON'}));if(j.error)throw new Error(j.error);return j;}
+function sseUrl(path){return API_BASE+path;}
+
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function md(text){if(!text)return '';let t=esc(text);
+t=t.replace(/```([\s\S]*?)```/g,(_,c)=>`\n<pre><code>${c.replace(/^\n/,'')}</code></pre>\n`);
+t=t.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+t=t.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>');
+t=t.replace(/^###\s+(.+)$/gm,'<p style="font-weight:600">$1</p>').replace(/^##\s+(.+)$/gm,'<p style="font-weight:600;font-size:16px">$1</p>');
+t=t.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank">$1</a>');
+t=t.replace(/^[\-\*]\s+(.+)$/gm,'<li>$1</li>').replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>');
+t=t.split(/\n{2,}/).map(b=>/^<(pre|ul|p)/.test(b.trim())?b:`<p>${b.replace(/\n/g,'<br>')}</p>`).join('');return t;}
+
+function setConnMode(m){state.connMode=m;const el=document.getElementById('connDot');if(el){el.className='conn-dot '+(m==='sse'?'sse':m==='polling'?'poll':'off');}}
+
+function render(){if(state.view==='files')return viewFiles('');if(state.view==='terminal')return viewTerminal();if(!state.session)return viewSessions();return viewChat();}
+
+async function viewSessions(){
+app.innerHTML=`<div class="topbar"><h1>会话</h1><button class="chip act" id="newS" style="padding:6px 10px;font-size:12px">+ 新建</button></div><div class="content" id="lst"><div class="empty">加载中…</div></div>`;
+document.getElementById('newS').onclick=async()=>{try{const r=await api('/api/sessions',{method:'POST',body:JSON.stringify({})});state.session={sessionId:r.sessionId,title:'新会话'};state.messages=[];state.lastSeq=0;state.events=[];render();}catch(e){alert('新建失败：'+e.message)}};
+const lst=document.getElementById('lst');
+try{const {items:ss}=await api('/api/sessions');let html='';
+if(ss.length)html+=ss.map(s=>`<div class="row" data-sid="${s.sessionId}"><div class="ttl">${esc(s.title||'(未命名)')}${s.running?'<span class="badge run" style="margin-left:6px">运行中</span>':''}</div><div class="meta">${esc((s.cwd||'').split(/[\\/]/).pop())}</div></div>`).join('');
+else html='<div class="empty">暂无会话，点 + 新建</div>';
+lst.innerHTML=html;
+lst.querySelectorAll('[data-sid]').forEach(el=>el.onclick=async()=>{state.session={sessionId:el.dataset.sid,title:el.querySelector('.ttl').textContent};state.messages=[];state.lastSeq=0;state.events=[];state.toolCards.clear();await loadHistory();render();});
+}catch(e){lst.innerHTML=`<div class="empty">加载失败：${esc(e.message)}</div>`;}
+}
+async function loadHistory(){try{const r=await api('/api/sessions/'+state.session.sessionId+'/history');state.messages=r.messages||[];}catch(e){state.messages=[{role:'assistant',text:'⚠ 无法加载历史：'+e.message}];}}
+
+function viewChat(){
+app.innerHTML=`<div class="topbar"><button class="back" id="bk">‹</button><span class="conn-dot off" id="connDot" title="未连接"></span><h1>${esc(state.session?.title||'对话')}</h1><button id="mdl" style="font-size:12px;color:var(--accent)">模型</button></div><div class="content chat" id="chat"></div><div class="chips"><span class="chip" id="permChip">权限</span><span class="chip" id="modelChip">${state.model?esc(state.model):'默认模型'}</span><span class="chip" id="filesChip">文件</span></div><div class="composer"><textarea id="ta" placeholder="输入指令，Enter 发送" rows="1"></textarea><button class="send" id="snd">↑</button></div>`;
+document.getElementById('bk').onclick=()=>{stopStream();state.session=null;render()};
+document.getElementById('mdl').onclick=openModelSheet;document.getElementById('modelChip').onclick=openModelSheet;
+document.getElementById('permChip').onclick=openPermSheet;document.getElementById('filesChip').onclick=()=>{state.view='files';render()};
+const ta=document.getElementById('ta'),snd=document.getElementById('snd');
+ta.oninput=()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,120)+'px'};
+ta.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}};
+snd.onclick=send;renderChat();startStream();
+}
+function renderChat(){const c=document.getElementById('chat');if(!c)return;c.innerHTML='';
+for(const m of state.messages){if(m.role==='tool'||m.role==='tool-result'){appendToolCard(m);continue}const div=document.createElement('div');div.className='msg';div.innerHTML=`<div class="role">${m.role==='user'?'你':'Agent'}</div><div class="bubble ${m.role==='user'?'user':''}">${md(m.text||'')}</div>`;c.appendChild(div);}
+for(const p of state.pending)appendPending(p);c.scrollTop=c.scrollHeight;}
+
+function appendToolCard(m){const c=document.getElementById('chat');if(!c)return;const callId=m.callId||('r'+Date.now());let card=state.toolCards.get(callId);if(!card){card=document.createElement('div');card.className='toolcard';card.innerHTML=`<div class="tc-head"><span class="tc-name">🔧 ${esc(m.text)}</span><span class="tc-st">执行中…</span></div><div class="tc-body" style="display:none"></div>`;c.appendChild(card);state.toolCards.set(callId,card);}
+const body=card.querySelector('.tc-body');let detail='';if(m.argsSummary)detail+='参数: '+m.argsSummary+'\n';if(m.result!==undefined)detail+=m.result;if(detail){body.textContent=detail;body.style.display='block';}
+const st=card.querySelector('.tc-st');if(m.result!==undefined){st.textContent=m.isError?'失败':'完成';st.className='tc-st '+(m.isError?'fail':'done');}else{st.textContent='执行中…';st.className='tc-st';}
+card.onclick=()=>{body.style.display=body.style.display==='none'?'block':'none'};c.scrollTop=c.scrollHeight;}
+
+function appendPending(p){const c=document.getElementById('chat');if(!c)return;if(document.getElementById('p_'+(p.key||p.approvalId)))return;
+const div=document.createElement('div');div.className='pending';div.id='p_'+(p.key||p.approvalId);
+if(p.kind==='question'){let opts='';for(const q of p.questions||[]){opts+=`<div style="margin-bottom:8px"><div style="font-weight:600;margin-bottom:4px">${esc(q.question||q.text||'')}</div>`;for(const o of(q.options||[]))opts+=`<button class="qopt" data-q="${esc(q.id)}" data-o="${esc(o.id)}">${esc(o.label||o.text||o.id)}</button>`;opts+='</div>';}
+opts+=`<div style="display:flex;gap:8px;margin-top:8px"><button class="chip" id="qskip">跳过</button></div>`;
+div.innerHTML=`<div class="pt">❓ Agent 提问</div>${opts}`;c.appendChild(div);
+div.querySelectorAll('.qopt').forEach(b=>b.onclick=()=>answerQuestion(p.rpcId,b.dataset.q,b.dataset.o));
+document.getElementById('qskip').onclick=()=>answerQuestion(p.rpcId,null,null);
+}else{div.innerHTML=`<div class="pt">🛡 需要授权</div><div class="pr"><b>${esc(p.toolName||'操作')}</b>${p.reason?'\n'+esc(p.reason):''}</div><div class="acts"><button class="deny">拒绝</button><button class="allow">允许</button></div>`;c.appendChild(div);
+div.querySelector('.allow').onclick=()=>respondApproval(p.approvalId,'allowed-once');div.querySelector('.deny').onclick=()=>respondApproval(p.approvalId,'rejected');}
+c.scrollTop=c.scrollHeight;}
+
+function startStream(){stopStream();if(!state.session)return;trySSE();}
+function trySSE(){if(!state.session)return;const es=new EventSource(sseUrl('/api/sessions/'+state.session.sessionId+'/events.stream'));state.sse=es;
+es.addEventListener(state.session.sessionId,(e)=>{try{handleEvent(JSON.parse(e.data))}catch{}});
+es.addEventListener('__pending',async()=>{try{const r=await api('/api/pending');state.pending=r.items||[];renderChat()}catch{}});
+es.onopen=()=>{state.sseFailCount=0;setConnMode('sse')};
+es.onerror=()=>{state.sseFailCount++;if(state.sseFailCount>=SSE_FAIL_THRESHOLD&&state.connMode!=='polling'){es.close();state.sse=null;startPolling();}};}
+function startPolling(){if(!state.session)return;setConnMode('polling');
+const poll=async()=>{if(!state.session||state.connMode!=='polling')return;try{const r=await api('/api/sessions/'+state.session.sessionId+'/events?afterSeq='+state.lastSeq);if(r&&r.items)for(const it of r.items)handleEvent(it);const p=await api('/api/pending');const prev=state.pending.length;state.pending=(p&&p.items)||[];if(prev!==state.pending.length)renderChat();}catch{}};
+poll();state.pollTimer=setInterval(poll,POLL_INTERVAL_MS);}
+function stopStream(){if(state.sse){state.sse.close();state.sse=null;}if(state.pollTimer){clearInterval(state.pollTimer);state.pollTimer=null;}setConnMode('off');}
+
+function handleEvent(it){state.events.push(it);if(it.seq>state.lastSeq)state.lastSeq=it.seq;const c=document.getElementById('chat');if(!c)return;
+if(it.kind==='text'||it.kind==='thinking'){let last=state.messages[state.messages.length-1];if(!last||last.role!=='assistant'||last._stream!==true){last={role:'assistant',text:'',_stream:true};state.messages.push(last);const div=document.createElement('div');div.className='msg';div.innerHTML=`<div class="role">Agent</div><div class="bubble"></div>`;c.appendChild(div);last._el=div.querySelector('.bubble');}
+if(it.kind==='thinking')last._think=(last._think||'')+it.text;else last.text+=it.text;
+if(last._el){let html=md(last.text);if(last._think)html='<div class="think">'+esc(last._think).slice(0,300)+'…</div>'+html;html+='<span class="stream-cur"></span>';last._el.innerHTML=html;}c.scrollTop=c.scrollHeight;
+}else if(it.kind==='tool'||it.kind==='tool-result'){appendToolCard({callId:it.callId,text:it.text||'',arguments:it.arguments,argsSummary:it.argsSummary,result:it.result,isError:it.isError});}
+else if(it.kind==='done'){const last=state.messages[state.messages.length-1];if(last&&last._stream){last._stream=false;if(last._el){const cur=last._el.querySelector('.stream-cur');if(cur)cur.remove();}}}}
+
+async function send(){const ta=document.getElementById('ta');const text=ta.value.trim();if(!text)return;ta.value='';ta.style.height='auto';state.messages.push({role:'user',text});const c=document.getElementById('chat');const div=document.createElement('div');div.className='msg';div.innerHTML=`<div class="role">你</div><div class="bubble user">${md(text)}</div>`;c.appendChild(div);c.scrollTop=c.scrollHeight;try{await api('/api/sessions/'+state.session.sessionId+'/prompt',{method:'POST',body:JSON.stringify({text})});}catch(e){state.messages.push({role:'assistant',text:'⚠ 发送失败：'+e.message});renderChat();}}
+
+async function respondApproval(id,outcome){try{await api('/api/approvals/'+id,{method:'POST',body:JSON.stringify({outcome})});document.getElementById('p_'+id)?.remove();state.pending=state.pending.filter(p=>p.approvalId!==id);}catch(e){alert('操作失败：'+e.message)}}
+async function answerQuestion(rpcId,qId,oId){const answers=[{id:qId,selected:oId?[oId]:[]}];try{await api('/api/questions/'+rpcId,{method:'POST',body:JSON.stringify({answer:{answers}})});document.getElementById('p_q:'+rpcId)?.remove();state.pending=state.pending.filter(p=>p.rpcId!==rpcId);}catch(e){alert('回答失败：'+e.message)}}
+
+async function openModelSheet(){const bg=document.createElement('div');bg.className='sheet-bg';bg.innerHTML=`<div class="sheet"><h3>选择模型</h3><div id="ml" style="padding:8px 0"><div class="empty">加载中…</div></div></div>`;app.appendChild(bg);bg.onclick=e=>{if(e.target===bg)bg.remove()};
+const ml=document.getElementById('ml');try{const r=await api('/api/sessions/'+state.session.sessionId+'/model');const items=r.items||r.models||[];if(!items.length){ml.innerHTML='<div class="empty">无可用模型</div>';return}let html='';const groups={};for(const m of items){const p=m.provider||m.group||'其他';(groups[p]=groups[p]||[]).push(m)}for(const[g,ms]of Object.entries(groups)){html+=`<div class="grp">${esc(g)}</div>`;html+=ms.map(m=>{const id=m.id||m.modelId||m.name;const cur=state.model===id?'cur':'';return `<div class="opt ${cur}" data-id="${esc(id)}"><span class="nm">${esc(m.name||m.label||id)}</span><span class="id">${esc(id)}</span></div>`}).join('');}
+ml.innerHTML=html;ml.querySelectorAll('.opt').forEach(o=>o.onclick=async()=>{try{await api('/api/sessions/'+state.session.sessionId+'/model',{method:'POST',body:JSON.stringify({model:o.dataset.id})});state.model=o.dataset.id;LS.set('model',o.dataset.id);bg.remove();document.getElementById('modelChip').textContent=o.dataset.id;}catch(e){alert('切换失败：'+e.message)}});}catch(e){ml.innerHTML='<div class="empty">加载失败：'+esc(e.message)+'</div>';}}
+
+function openPermSheet(){const bg=document.createElement('div');bg.className='sheet-bg';const modes=[{id:'ask',label:'逐次询问（默认）'},{id:'auto',label:'自动执行'},{id:'read-only',label:'只读模式'},{id:'plan',label:'仅规划'}];bg.innerHTML=`<div class="sheet"><h3>权限模式</h3>${modes.map(m=>`<div class="opt" data-m="${m.id}"><span class="nm">${esc(m.label)}</span><span class="id">${m.id}</span></div>`).join('')}</div>`;app.appendChild(bg);bg.onclick=e=>{if(e.target===bg)bg.remove()};bg.querySelectorAll('.opt').forEach(o=>o.onclick=async()=>{try{await api('/api/sessions/'+state.session.sessionId+'/permission',{method:'POST',body:JSON.stringify({mode:o.dataset.m})});bg.remove();}catch(e){alert('设置失败：'+e.message)}});}
+
+async function viewFiles(dir){app.innerHTML=`<div class="topbar"><button class="back" id="bk">‹</button><h1>文件</h1></div><div class="content" id="fl"><div class="empty">加载中…</div></div>`;document.getElementById('bk').onclick=()=>{state.view='chat';render()};const fl=document.getElementById('fl');try{const r=await api('/api/files'+(dir?('?path='+encodeURIComponent(dir)):''));let html=`<div class="row" style="font-size:12px;color:var(--muted);cursor:default">${esc(r.path)}</div>`;html+=r.items.map(f=>`<div class="file-item" data-d="${f.dir?'1':'0'}" data-p="${esc((r.path.replace(/[\\/]+$/,'')+'/'+f.name).replace(/\\/g,'/'))}"><span class="ic">${f.dir?'📁':'📄'}</span><span class="nm">${esc(f.name)}</span></div>`).join('');fl.innerHTML=html;fl.querySelectorAll('.file-item').forEach(el=>el.onclick=()=>{if(el.dataset.d==='1')viewFiles(el.dataset.p);else viewFile(el.dataset.p);});}catch(e){fl.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}
+const tb=document.createElement('div');tb.className='tabbar';tb.innerHTML=`<button data-v="chat"><span class="ico">💬</span>对话</button><button data-v="files" class="on"><span class="ico">📁</span>文件</button><button data-v="terminal"><span class="ico">⌨</span>终端</button>`;app.appendChild(tb);tb.querySelectorAll('button').forEach(b=>b.onclick=()=>{state.view=b.dataset.v;render()});}
+async function viewFile(p){app.innerHTML=`<div class="topbar"><button class="back" id="bk">‹</button><h1 style="font-size:13px">${esc(p.split(/[\\/]/).pop())}</h1></div><div class="content" id="fv"><div class="empty">加载中…</div></div>`;document.getElementById('bk').onclick=()=>viewFiles(p.split(/[\\/]/).slice(0,-1).join('/')||'');try{const r=await api('/api/file?path='+encodeURIComponent(p));document.getElementById('fv').innerHTML=`<pre class="code-view">${esc(r.content)}</pre>`;}catch(e){document.getElementById('fv').innerHTML='<div class="empty">'+esc(e.message)+'</div>';}}
+
+function viewTerminal(){app.innerHTML=`<div class="topbar"><button class="back" id="bk">‹</button><h1>终端</h1></div><div class="content"><div class="term-out" id="out">$ 在电脑上执行命令</div></div><div class="composer"><input id="cmd" placeholder="输入命令，Enter 执行" style="font-family:monospace"><button class="send" id="run">▶</button></div>`;document.getElementById('bk').onclick=()=>{state.view='chat';render()};const cmd=document.getElementById('cmd'),out=document.getElementById('out');cmd.onkeydown=e=>{if(e.key==='Enter')runCmd()};document.getElementById('run').onclick=runCmd;async function runCmd(){const c=cmd.value.trim();if(!c)return;cmd.value='';out.textContent+='\n$ '+c+'\n';try{const r=await api('/api/terminal',{method:'POST',body:JSON.stringify({command:c})});out.textContent+=(r.stdout||'')+(r.stderr?'\n[stderr] '+r.stderr:'')+'\n[exit '+r.exitCode+']';out.scrollTop=out.scrollHeight;}catch(e){out.textContent+='\n错误：'+e.message;}}
+const tb=document.createElement('div');tb.className='tabbar';tb.innerHTML=`<button data-v="chat"><span class="ico">💬</span>对话</button><button data-v="files"><span class="ico">📁</span>文件</button><button data-v="terminal" class="on"><span class="ico">⌨</span>终端</button>`;app.appendChild(tb);tb.querySelectorAll('button').forEach(b=>b.onclick=()=>{state.view=b.dataset.v;render()});}
+
+render();window.addEventListener('beforeunload',()=>stopStream());
+</script>
+</body>
+</html>
