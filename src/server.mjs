@@ -13,6 +13,7 @@ import {
   historyToMessages, normPath, baseName,
 } from './dsh-client.mjs';
 import { PORT, TOKEN, DEFAULT_CWD, ALLOW_INTERNET, VERSION } from './config.mjs';
+import { createSyncBridge } from './sync.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = path.join(__dirname, '..', 'web');
@@ -100,6 +101,7 @@ async function readFileContent(file) {
 
 // ---- 路由 ----
 export function createServer(eventStore) {
+  const sync = createSyncBridge();
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const { pathname } = url;
@@ -211,15 +213,56 @@ export function createServer(eventStore) {
       }
       const sseMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/events\.stream$/);
       if (req.method === 'GET' && sseMatch) {
+        // 离线补同步：连接建立时先回放 afterSeq 之后的缓冲事件，再挂实时推送
+        const after = Number(url.searchParams.get('afterSeq')) || 0;
+        const replay = await eventStore.getEvents(sseMatch[1], after);
         res.writeHead(200, {
           'content-type': 'text/event-stream', 'cache-control': 'no-store, no-transform',
           'connection': 'keep-alive', 'x-accel-buffering': 'no',
         });
-        res.write(`event: __hello\ndata: ${JSON.stringify({ sessionId: sseMatch[1] })}\n\n`);
+        for (const it of replay.items) {
+          res.write(`event: ${sseMatch[1]}\ndata: ${JSON.stringify(it)}\n\n`);
+        }
+        res.write(`event: __hello\ndata: ${JSON.stringify({ sessionId: sseMatch[1], lastSeq: replay.lastSeq })}\n\n`);
         eventStore.addSseClient(res);
         const ka = setInterval(() => { try { res.write(': keepalive\n\n'); } catch {} }, 25000);
         res.on('close', () => clearInterval(ka));
         return; // 长连接，由 eventStore 推送
+      }
+
+      // ============ 双向同步（手机半边）============
+      if (req.method === 'GET' && pathname === '/m/api/sync/state') {
+        return sendJson(res, 200, sync.snapshot());
+      }
+      if (req.method === 'GET' && pathname === '/m/api/sync') {
+        sync.openMobileStream(res);
+        return;
+      }
+      if (req.method === 'POST' && pathname === '/m/api/sync/mobile-state') {
+        const b = await readBody(req);
+        const patch = {};
+        if (typeof b.activeSessionId === 'string') patch.activeSessionId = b.activeSessionId || null;
+        if (typeof b.activeSessionTitle === 'string') patch.activeSessionTitle = b.activeSessionTitle || null;
+        if (typeof b.model === 'string') patch.model = b.model || null;
+        if (typeof b.permission === 'string') patch.permission = b.permission || null;
+        if (typeof b.action === 'string' && b.action) sync.recordAction('mobile', b.action);
+        sync.setState('mobile', patch);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (req.method === 'GET' && pathname === '/api/sync') {
+        sync.openPcStream(res);
+        return;
+      }
+      if (req.method === 'POST' && pathname === '/api/sync/pc-state') {
+        const b = await readBody(req);
+        const patch = {};
+        if (typeof b.activeSessionId === 'string') patch.activeSessionId = b.activeSessionId || null;
+        if (typeof b.activeSessionTitle === 'string') patch.activeSessionTitle = b.activeSessionTitle || null;
+        if (typeof b.model === 'string') patch.model = b.model || null;
+        if (typeof b.permission === 'string') patch.permission = b.permission || null;
+        if (typeof b.action === 'string' && b.action) sync.recordAction('pc', b.action);
+        sync.setState('pc', patch);
+        return sendJson(res, 200, { ok: true });
       }
 
       // ============ 审批 / 提问 ============
@@ -258,5 +301,5 @@ export function createServer(eventStore) {
   });
 
   const host = ALLOW_INTERNET ? '0.0.0.0' : '127.0.0.1';
-  return { server, host, port: PORT };
+  return { server, host, port: PORT, sync };
 }

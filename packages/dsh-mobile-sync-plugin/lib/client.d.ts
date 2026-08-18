@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Context, Events, Service } from "@deepseek-ai/cordis";
 import { ClientResponse, DirectoryListing, JobView, MuxFrame, PromptContentPart, QueueAction, RpcError, RpcId, RpcReceipt, RpcResult, SubagentAddress, SubagentCatalog, ToolEventView, WorkspaceId, WorkspaceView } from "@deepseek-ai/dsh-host-apiproxy/api";
 import "@deepseek-ai/dsh-host-apiproxy/client";
-//#region node_modules/@deepseek-ai/dsh-typert-protocol/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-typert-pro_174f55289b567c5697c3ab08b42c0dfb/node_modules/@deepseek-ai/dsh-typert-protocol/lib/types/types.d.ts
 declare const LOOKUP_HOST: unique symbol;
 declare const LOOKUP_WIRE: unique symbol;
 declare const CONTEXT_WIRE: unique symbol;
@@ -387,7 +387,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-brand/lib/types/index.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-brand@0.1._6a8c34f5312bab201025249905159fbe/node_modules/@deepseek-ai/dsh-brand/lib/types/index.d.ts
 /**
  * The `Branded<B>` nominal-typing primitive — a type-only utility (no runtime
  * code, no harness-package dependency) shared by every package that owns a
@@ -416,7 +416,7 @@ type Branded<B extends string> = string & {
   readonly [BRAND]: B;
 };
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-host-plugin-inventory/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-host-plugi_cd4e42fbe5707f1fc102f76d31db36d3/node_modules/@deepseek-ai/dsh-host-plugin-inventory/lib/types/types.d.ts
 /** Stable Loader-tree identity of one configured plugin entry. */
 type PluginEntryId = Branded<'PluginEntryId'>;
 /** Lifecycle state of an entry's root Fiber, or null when it has no live root Fiber. */
@@ -435,7 +435,7 @@ interface PluginInventorySnapshot {
   readonly entries: readonly PluginInventoryEntry[];
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-commands/lib/types/brand.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-commands@0_cbc96102c3e6d869c612b5d42d4d4cc7/node_modules/@deepseek-ai/dsh-commands/lib/types/brand.d.ts
 /**
  * Pairs one command execution's `command/run`/`command/done` lifecycle
  * records with each other and with the `command.execute` admission response.
@@ -449,7 +449,7 @@ type CommandId = Branded<'CommandId'>;
  */
 declare function CommandId(id: string): CommandId;
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-commands/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-commands@0_cbc96102c3e6d869c612b5d42d4d4cc7/node_modules/@deepseek-ai/dsh-commands/lib/types/types.d.ts
 /** Immutable metadata for a command's optional unstructured input. */
 interface CommandInputDescriptor {
   /** Placeholder shown before the user supplies free-form input. */
@@ -543,7 +543,7 @@ declare module '@deepseek-ai/dsh-session/types' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-attachment/lib/types/brand.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-attachment_a449f8aefc4db09024dfd8133adf8e7b/node_modules/@deepseek-ai/dsh-attachment/lib/types/brand.d.ts
 /** Opaque content-addressed identifier for one immutable attachment object. */
 type AttachmentId = Branded<'AttachmentId'>;
 /**
@@ -553,7 +553,7 @@ type AttachmentId = Branded<'AttachmentId'>;
  */
 declare function AttachmentId(value: string): AttachmentId;
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-attachment/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-attachment_a449f8aefc4db09024dfd8133adf8e7b/node_modules/@deepseek-ai/dsh-attachment/lib/types/types.d.ts
 /** Raster image formats accepted by the version-one attachment path. */
 type ImageMediaType = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
 /** Durable, serializable metadata for one immutable image object. */
@@ -593,7 +593,7 @@ interface StoredImageAttachment {
   data: Uint8Array;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-attachment/lib/types/index.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-attachment_a449f8aefc4db09024dfd8133adf8e7b/node_modules/@deepseek-ai/dsh-attachment/lib/types/index.d.ts
 declare module '@deepseek-ai/cordis' {
   interface Context {
     attachments: AttachmentStore;
@@ -636,7 +636,7 @@ declare abstract class AttachmentStore extends Service {
   abstract readImage(ref: ImageAttachmentRef, signal?: AbortSignal): Promise<StoredImageAttachment>;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-llm/lib/types/brand.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-llm@0.1.0-_0d6788f2a94d438ba9affaa284e28ab3/node_modules/@deepseek-ai/dsh-llm/lib/types/brand.d.ts
 /** Stable identity carried by one message across inbox, log, and model-request boundaries. */
 type MessageId = Branded<'MessageId'>;
 /**
@@ -673,7 +673,7 @@ type ReasoningEffortId = Branded<'ReasoningEffortId'>;
  */
 declare function ReasoningEffortId(id: string): ReasoningEffortId;
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-llm/lib/types/message.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-llm@0.1.0-_0d6788f2a94d438ba9affaa284e28ab3/node_modules/@deepseek-ai/dsh-llm/lib/types/message.d.ts
 /** Provider/model identity and adapter-private replay data for an assistant message. */
 interface AssistantProvenance {
   /** Provider route that produced the message. */
@@ -775,7 +775,7 @@ interface ToolResultMessage extends Message {
   readonly source: ToolMessageSource;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-llm/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-llm@0.1.0-_0d6788f2a94d438ba9affaa284e28ab3/node_modules/@deepseek-ai/dsh-llm/lib/types/types.d.ts
 declare module '@deepseek-ai/cordis' {
   interface Events {
     /**
@@ -1135,7 +1135,7 @@ interface GenerateOptions {
   purpose?: 'compaction' | 'session-title';
 }
 //#endregion
-//#region node_modules/@deepseek-ai/cosmokit/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+cosmokit@1.8.2/node_modules/@deepseek-ai/cosmokit/lib/types/types.d.ts
 declare function isArrayBufferLike(value: any): value is ArrayBufferLike;
 declare function isArrayBufferSource(value: any): value is Binary.Source;
 /** Binary source detection and base64/hex conversion helpers. */
@@ -1150,11 +1150,11 @@ declare namespace Binary {
   function fromHex(source: string): ArrayBuffer;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/cosmokit/lib/types/misc.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+cosmokit@1.8.2/node_modules/@deepseek-ai/cosmokit/lib/types/misc.d.ts
 /** String/symbol keyed dictionary type. */
 type Dict<T = any, K extends string | symbol = string> = { [key in K]: T; };
 //#endregion
-//#region node_modules/@standard-schema/spec/dist/index.d.ts
+//#region node_modules/.pnpm/@standard-schema+spec@1.1.0/node_modules/@standard-schema/spec/dist/index.d.ts
 /** The Standard Typed interface. This is a base type extended by other specs. */
 interface StandardTypedV1<Input = unknown, Output = Input> {
   /** The Standard properties. */
@@ -1231,7 +1231,7 @@ declare namespace StandardSchemaV1 {
   type InferOutput<Schema extends StandardTypedV1> = StandardTypedV1.InferOutput<Schema>;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/schemastery/lib/types/index.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+schemastery@3.18.1/node_modules/@deepseek-ai/schemastery/lib/types/index.d.ts
 declare const kSchema: unique symbol;
 declare global {
   namespace Schemastery {
@@ -1425,7 +1425,7 @@ declare class ValidationError extends TypeError {
 type Schema<S = any, T = S> = Schemastery<S, T>;
 declare const Schema: Schemastery.Static;
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-llm/lib/types/retry-policy.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-llm@0.1.0-_0d6788f2a94d438ba9affaa284e28ab3/node_modules/@deepseek-ai/dsh-llm/lib/types/retry-policy.d.ts
 /** Fully resolved backoff shared by both retry modes. */
 interface ResolvedRetryBackoff {
   readonly initialDelayMs: number;
@@ -1445,7 +1445,7 @@ interface ResolvedAlwaysRetryPolicy extends ResolvedRetryBackoff {
 /** Immutable provider policy captured when its adapter route is registered. */
 type ResolvedRetryPolicy = ResolvedNormalRetryPolicy | ResolvedAlwaysRetryPolicy;
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-llm/lib/types/call-config.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-llm@0.1.0-_0d6788f2a94d438ba9affaa284e28ab3/node_modules/@deepseek-ai/dsh-llm/lib/types/call-config.d.ts
 /**
  * Provider, model, reasoning effort, and sampling scalars of one conversation's
  * requests. Every field maps 1:1 onto the same-named `GenerateOptions` field;
@@ -1469,7 +1469,7 @@ interface LlmCallConfigAdapterDefaults {
   maxTokens?: true;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-llm/lib/types/index.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-llm@0.1.0-_0d6788f2a94d438ba9affaa284e28ab3/node_modules/@deepseek-ai/dsh-llm/lib/types/index.d.ts
 declare module '@deepseek-ai/cordis' {
   interface Context {
     llm: LlmRuntime;
@@ -1743,7 +1743,7 @@ declare class LlmRuntime extends Service {
   private streamWithRegistration;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-session/lib/types/json.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-session@0._8f195c1f10810e09a8d960403fe19eda/node_modules/@deepseek-ai/dsh-session/lib/types/json.d.ts
 /** Lossless-JSON validation and detached snapshots for durable session data. @module @deepseek-ai/dsh-session/json */
 /**
  * A value that round-trips losslessly through JSON: `null`, a boolean, a finite
@@ -1759,7 +1759,7 @@ type JsonValue = null | boolean | number | string | JsonValue[] | {
   [key: string]: JsonValue;
 };
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-session/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-session@0._8f195c1f10810e09a8d960403fe19eda/node_modules/@deepseek-ai/dsh-session/lib/types/types.d.ts
 /** Identifies one session in the store (and its persistence artifacts). */
 type SessionId = Branded<'SessionId'>;
 /**
@@ -2077,7 +2077,7 @@ type SessionEvent<T extends SessionEventType = SessionEventType> = { [K in Sessi
   surfaceOp?: SurfaceOp;
 } : object); }[T];
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-commands/lib/typert.remote-client.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-commands@0_cbc96102c3e6d869c612b5d42d4d4cc7/node_modules/@deepseek-ai/dsh-commands/lib/typert.remote-client.d.ts
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$636f6d6d616e6473 {
     execute: (agentId: SessionId, line: string, signal?: AbortSignal) => Promise<RemoteResult<CommandExecution | undefined>>;
@@ -2096,7 +2096,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-goal/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-goal@0.1.0_3c9a634b1e8382752be79cc324bfb062/node_modules/@deepseek-ai/dsh-goal/lib/types/types.d.ts
 /** Identifies one goal across its durable revisions. */
 type GoalId = Branded<'GoalId'>;
 /** Compare-and-set identity for one exact goal revision. */
@@ -2181,7 +2181,7 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-goal/lib/typert.remote-client.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-goal@0.1.0_3c9a634b1e8382752be79cc324bfb062/node_modules/@deepseek-ai/dsh-goal/lib/typert.remote-client.d.ts
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$676f616c73 {
     clear: (agentId: SessionId, ref: GoalRef$1) => Promise<RemoteResult<GoalRef$1>>;
@@ -2212,7 +2212,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-host-plugin-inventory/lib/typert.remote-client.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-host-plugi_cd4e42fbe5707f1fc102f76d31db36d3/node_modules/@deepseek-ai/dsh-host-plugin-inventory/lib/typert.remote-client.d.ts
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$706c7567696e496e76656e746f7279 {
     list: () => Promise<RemoteResult<PluginInventorySnapshot>>;
@@ -2225,7 +2225,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-message-feedback/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-message-fe_a8f377ecf4f7bc27cda833f3137be843/node_modules/@deepseek-ai/dsh-message-feedback/lib/types/types.d.ts
 /** Opaque compare-and-set token for one exact feedback item revision. */
 type MessageFeedbackVersion = Branded<'MessageFeedbackVersion'>;
 /** The human's overall judgment of one assistant message. */
@@ -2328,7 +2328,7 @@ type MessageFeedbackPutResult = MessageFeedbackSuccess<MessageFeedbackItem> | Me
 /** Result returned by the message-feedback `delete` operation. */
 type MessageFeedbackDeleteResult = MessageFeedbackSuccess<MessageFeedbackDeleteValue> | MessageFeedbackRejected<MessageFeedbackSessionNotFound | MessageFeedbackVersionConflict>;
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-message-feedback/lib/typert.remote-client.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-message-fe_a8f377ecf4f7bc27cda833f3137be843/node_modules/@deepseek-ai/dsh-message-feedback/lib/typert.remote-client.d.ts
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$6d657373616765466565646261636b {
     delete: (request: MessageFeedbackDeleteRequest) => Promise<RemoteResult<MessageFeedbackDeleteResult>>;
@@ -2345,7 +2345,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-api-remotes/lib/types/remote-events.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-api-remote_19ccb00fbb8701c7d89f65030755b7e5/node_modules/@deepseek-ai/dsh-api-remotes/lib/types/remote-events.d.ts
 /**
  * The one home of this application's forwarded-Host-event allowlist. Both
  * compiler faces list this file, so the Host forwarding loop and the consumer
@@ -2363,14 +2363,14 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
  */
 declare const API_REMOTE_FORWARDED_EVENTS: readonly ["agent-preset/selected", "commands/change", "credentials/updated", "cordis/request-run", "cordis/request-run-resolved", "cordis/dynamic-package", "cordis/dynamic-retract", "cordis/inspect-query", "cordis/inspect-query-resolved", "llm/adapters-updated", "settings/document-updated"];
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-api-remotes/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-api-remote_19ccb00fbb8701c7d89f65030755b7e5/node_modules/@deepseek-ai/dsh-api-remotes/lib/types/types.d.ts
 /** Type projection of the allowlist; the consumer and the Host read this one. */
 type ApiRemoteForwardedEvent = typeof API_REMOTE_FORWARDED_EVENTS[number];
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteEventSelection extends Record<ApiRemoteForwardedEvent, true> {}
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-cordis-host-runner/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-cordis-hos_53c9cb5a6aba89ea13042c10abf3de10/node_modules/@deepseek-ai/dsh-cordis-host-runner/lib/types/types.d.ts
 /** Stable identity of one dynamic plugin instance. */
 type CordisDynamicPluginId = Branded<'CordisDynamicPluginId'>;
 /** Identity of one immutable package version belonging to a dynamic plugin. */
@@ -2717,7 +2717,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-credentials/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-credential_6df341f05d8885c9ff6d5b51570dc623/node_modules/@deepseek-ai/dsh-credentials/lib/types/types.d.ts
 /** Nominal reference to one credential: a POSIX-style environment-variable name. */
 type CredentialRef = Branded<'CredentialRef'>;
 declare module '@deepseek-ai/cordis' {
@@ -2738,7 +2738,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-agent-presets/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-agent-pres_ebf92a3650bd50a5ac63be524b86d6aa/node_modules/@deepseek-ai/dsh-agent-presets/lib/types/types.d.ts
 declare module '@deepseek-ai/cordis' {
   interface Events {
     /**
@@ -2752,7 +2752,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-settings/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-settings@0_6b0eb868fb92d854799855c05c5fa43c/node_modules/@deepseek-ai/dsh-settings/lib/types/types.d.ts
 /** Nominal id of one registered settings namespace. */
 type SettingsNamespace = Branded<'SettingsNamespace'>;
 /** Origin of one committed settings change. */
@@ -2790,7 +2790,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-tools/lib/types/presentation.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-tools@0.1._ff9e97d41f06ac2b2e9e3769ed6440a7/node_modules/@deepseek-ai/dsh-tools/lib/types/presentation.d.ts
 /**
  * Category of a tool call, used by a UI to pick an icon or treatment. The
  * provider-neutral vocabulary lets tools describe themselves without depending
@@ -3151,7 +3151,7 @@ interface WebFetchResultView {
   truncated: boolean;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-api-gateway/lib/types/client/index.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-api-gatewa_ac42a25ae6ae684b0a113b07b0eea6fd/node_modules/@deepseek-ai/dsh-api-gateway/lib/types/client/index.d.ts
 /** Typed Remote service augmented by generated direct namespaces. */
 type ClientRemote = TypertClientRemote;
 declare module '@deepseek-ai/cordis' {
@@ -3161,7 +3161,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-cordis-host-runner/lib/typert.remote-client.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-cordis-hos_53c9cb5a6aba89ea13042c10abf3de10/node_modules/@deepseek-ai/dsh-cordis-host-runner/lib/typert.remote-client.d.ts
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$64796e616d6963436f7264697352756e6e6572 {
     getClientCode: (agentId: SessionId, pluginId: CordisDynamicPluginId, pluginRunId: CordisDynamicPluginRunId) => Promise<RemoteResult<DynamicCordisClientSource>>;
@@ -3206,7 +3206,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-api-remotes/lib/types/client/index.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-api-remote_19ccb00fbb8701c7d89f65030755b7e5/node_modules/@deepseek-ai/dsh-api-remotes/lib/types/client/index.d.ts
 declare module '@deepseek-ai/cordis' {
   interface Context {
     /** Generated Remote namespaces selected by this Client assembly. */
@@ -3214,7 +3214,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-ui-slots/lib/types/renderer.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-ui-_9e661a8a372fb0385c67abcd87000026/node_modules/@deepseek-ai/dsh-client-ui-slots/lib/types/renderer.d.ts
 /**
  * The locale face the render machinery consumes: namespace binding plus an
  * observable revision (getSnapshot/subscribe pair — the same HostObservable
@@ -3394,7 +3394,7 @@ interface SlotRenderer {
   renderRoot(host: SlotRendererHost, ownerProps: object): ReactNode;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-ui-slots/lib/types/store.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-ui-_9e661a8a372fb0385c67abcd87000026/node_modules/@deepseek-ai/dsh-client-ui-slots/lib/types/store.d.ts
 /** Framework-neutral store contracts for slot registrations and the runtime engine. */
 /**
  * Typed selector hook over a snapshot source. Canonical shape for the whole
@@ -3498,7 +3498,7 @@ type PropsStore<H> = H extends StoreHandle<infer T, infer A> ? {
   actions: BakedActions<T, A>;
 } : object;
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-ui-slots/lib/types/index.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-ui-_9e661a8a372fb0385c67abcd87000026/node_modules/@deepseek-ai/dsh-client-ui-slots/lib/types/index.d.ts
 /** Slot contract table. Owners extend via declaration merging; entries are {@link SlotEntryDef}. */
 interface SlotMap {}
 /**
@@ -4157,14 +4157,14 @@ declare class SlotCore {
   private flush;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/store.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/store.d.ts
 /** Minimal observable snapshot source: Session objects and snapshot stores both satisfy it. */
 interface ObservableSnapshot<T> {
   getSnapshot(): T;
   subscribe(fn: () => void): () => void;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/workspaces.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/workspaces.d.ts
 /** The workspaces-service face injected as `ctx.workspaces`. */
 interface IWorkspaces {
   /** The useWorkspaces standard feed (read face — writes stay inside the domain). */
@@ -4250,11 +4250,11 @@ interface IWorkspaces {
   archiveSession(sessionId: SessionId): Promise<void>;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/workspaces/manager.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/workspaces/manager.d.ts
 /** Monotone workspace-list arrival lifecycle. */
 type WorkspaceListPhase = 'pending' | 'ready';
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/workspaces/service.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/workspaces/service.d.ts
 /** Workspace list plus the two-baseline readiness and default-target projection. */
 interface WorkspaceListState {
   items: readonly WorkspaceView[];
@@ -4275,7 +4275,7 @@ interface WorkspaceListState {
   recentWorkspaceId: WorkspaceId | undefined;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/slots.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/slots.d.ts
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     /**
@@ -4451,7 +4451,7 @@ declare class SlotRegistry extends Service {
   private _release;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/conversation.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/conversation.d.ts
 /** One raw log event plus its optional envelope-level presentation view. */
 interface ConversationEventInput {
   readonly event: SessionEvent;
@@ -4675,7 +4675,7 @@ interface ConversationViewDefinition<Node extends ConversationViewNode = Convers
   create(): ConversationViewBuilder<Node, Snapshot>;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/conversation/definition-registry.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/conversation/definition-registry.d.ts
 /** Shared lifecycle and stable-entry storage for one Conversation Definition registry. */
 declare abstract class ConversationDefinitionRegistry<Definition> extends Service {
   protected readonly definitions: Map<string, Definition>;
@@ -4705,7 +4705,7 @@ declare abstract class ConversationDefinitionRegistry<Definition> extends Servic
   protected refresh(): void;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/conversation/event-registry.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/conversation/event-registry.d.ts
 /** Runtime registry of independently owned Conversation business Definitions. */
 declare class ConversationEventRegistry extends ConversationDefinitionRegistry<ConversationNodeDefinition> {
   private fallback;
@@ -4730,7 +4730,7 @@ declare class ConversationEventRegistry extends ConversationDefinitionRegistry<C
   fallbackEntry(): ConversationNodeDefinition | undefined;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/conversation/view-registry.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/conversation/view-registry.d.ts
 /** Runtime registry of per-target Conversation snapshot builders. */
 declare class ConversationViewRegistry extends ConversationDefinitionRegistry<ConversationViewDefinition> {
   /** @param ctx - owning Client Runtime context. */
@@ -4743,13 +4743,13 @@ declare class ConversationViewRegistry extends ConversationDefinitionRegistry<Co
   register(definition: ConversationViewDefinition): () => void;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/agents/scope.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/agents/scope.d.ts
 /** Client Cordis Context carrying one Agent identity and its scoped Remote namespaces. */
 type AgentContext = Omit<Context, 'remote'> & {
   readonly remote: TypertClientRemote & TypertRemoteScopeApi<'agent'>;
 };
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-session-projection/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-session-pr_8e39d6d2bfa60a8f909a7c75946a79b3/node_modules/@deepseek-ai/dsh-session-projection/lib/types/types.d.ts
 /**
  * Pure-type outlet of the session-projection Service Definition: the one projection type
  * table, importable from client aggregates without dragging the host-side
@@ -4767,7 +4767,7 @@ type AgentContext = Omit<Context, 'remote'> & {
  */
 interface SessionProjectionMap {}
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/pending.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/pending.d.ts
 /** Kind-keyed payload map: the requested frame's domain fields (envelope fields stripped). */
 interface PendingPayloads {
   approval: Omit<Extract<MuxFrame, {
@@ -4820,7 +4820,7 @@ declare class PendingWait<K extends PendingKind = PendingKind> {
   markSettled(): void;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-llm-retry/lib/types/brand.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-llm-retry@_4cc98f7d15426efc01323b22ae043208/node_modules/@deepseek-ai/dsh-llm-retry/lib/types/brand.d.ts
 /** Stable identity shared by every attempt in one request-step retry chain. */
 type RetryId = Branded<'RetryId'>;
 /**
@@ -4830,7 +4830,7 @@ type RetryId = Branded<'RetryId'>;
  */
 declare function RetryId(id: string): RetryId;
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-llm-retry/lib/types/types.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-llm-retry@_4cc98f7d15426efc01323b22ae043208/node_modules/@deepseek-ai/dsh-llm-retry/lib/types/types.d.ts
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     /** Durable, non-surface record of one provider-routed retry scheduled after a failed request attempt. */
@@ -4870,7 +4870,7 @@ interface LlmRetryStartedEventData {
   retry: number;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/context-provenance.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/context-provenance.d.ts
 /**
  * Which model-facing role a logged non-user message plays.
  *
@@ -4903,7 +4903,7 @@ declare const KNOWN_FORMS: readonly ["instructions", "catalog", "snapshot", "not
 /** One durable context form this UI version knows how to present. */
 type KnownContextForm = typeof KNOWN_FORMS[number];
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/conversation.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/conversation.d.ts
 /** Request configuration recorded for one provider call. */
 interface AssistantRequestConfig {
   provider: string;
@@ -5295,7 +5295,7 @@ interface ConversationSnapshot {
   lastAgentError: string | null;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/session.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/session.d.ts
 /** Key-addressed projection read face (the useProjection resolution path; see ProjectionValueStore). */
 interface ProjectionsFace {
   /**
@@ -5379,7 +5379,7 @@ interface ISession {
  */
 type SessionFace = ISession & ObservableSnapshot<ConversationSnapshot>;
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/projection-store.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/projection-store.d.ts
 /**
  * The fifth framework hook seat (see the session-projection subsystem page,
  * docs/subsystems/session-projection.md): key-addressed
@@ -5394,7 +5394,7 @@ type UseProjection = {
   <K extends Extract<keyof SessionProjectionMap, string>, S>(key: K, selector: (value: SessionProjectionMap[K] | undefined) => S, eq?: (a: S, b: S) => boolean): S;
 };
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/manager.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/manager.d.ts
 /**
  * List arrival lifecycle, orthogonal to the pull-activity `state` axis:
  * `pending` (no successful pull yet — an empty items array means "nothing
@@ -5415,7 +5415,7 @@ interface SubagentCatalogSnapshot extends SubagentCatalog {
   error: RpcError | null;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/service.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/sessions/service.d.ts
 /** Session list row projected from the host list RPC plus live stream increments. */
 interface SessionSummary {
   id: SessionId;
@@ -5501,7 +5501,7 @@ interface SessionProvideDescriptor {
   resolve(binding: SessionBinding): SessionProvideContribution;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/sessions.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/contract/sessions.d.ts
 /** The sessions-service face injected as `ctx.sessions`. */
 interface ISessions {
   /** The useSessions standard feed (list rows + current selection; read face — writes stay inside the domain). */
@@ -5612,7 +5612,7 @@ interface ISessions {
   binding(id: SessionId): SessionBinding | undefined;
 }
 //#endregion
-//#region node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/index.d.ts
+//#region node_modules/.pnpm/@deepseek-ai+dsh-client-run_cb73670ef81acd461d1a68acccb0b349/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/index.d.ts
 /** Client-side Cordis context after declaration merging. */
 type ClientContext = Context;
 declare module '@deepseek-ai/dsh-typert-protocol' {

@@ -6,7 +6,8 @@ import type {} from '@deepseek-ai/dsh-host-webserver';
 import type {} from '@deepseek-ai/dsh-host-apiproxy';
 import { PairingService } from './pairing.js';
 import { createEventStore, type EventStore } from './event-store.js';
-import { makePairRoutes, makeMobileApiRoutes, makeMobileRoutes } from './routes.js';
+import { makePairRoutes, makeMobileApiRoutes, makeMobileRoutes, makeSyncRoutes } from './routes.js';
+import { createSyncBridge, type SyncBridge } from './sync.js';
 import type { MobileSyncConfig } from './config.js';
 import { DEFAULT_CONFIG } from './config.js';
 import os from 'node:os';
@@ -53,14 +54,19 @@ export function apply(ctx: Context, config: MobileSyncConfig = {}): void {
   // 1) 配对服务
   const pairing = new PairingService(qrOrigin, cfg.publicBaseUrl);
 
+  // 1.5) 双向同步桥（PC ↔ 手机 UI 状态镜像）
+  const sync: SyncBridge = createSyncBridge();
+  sync.setDeviceSource(() => pairing.snapshot().devices.map((d) => ({ label: d.label, online: d.online })));
+
   // 2) 事件中继（连 DSH events.mux）
   const eventStore: EventStore = createEventStore({ dshBaseUrl, apiProxy: ctx.apiProxy });
 
   // 3) 注册所有路由
   const allRoutes = [
-    ...makePairRoutes(pairing),
+    ...makePairRoutes(pairing, undefined, sync),
+    ...makeSyncRoutes(sync),
     ...makeMobileRoutes(),
-    ...makeMobileApiRoutes(pairing, eventStore, ctx.apiProxy, process.cwd()),
+    ...makeMobileApiRoutes(pairing, eventStore, ctx.apiProxy, process.cwd(), sync),
   ];
 
   const disposeRoutes = ctx.effect(() => {
@@ -74,6 +80,9 @@ export function apply(ctx: Context, config: MobileSyncConfig = {}): void {
     eventStore.start();
     return () => { eventStore.stop(); };
   });
+
+  // 4.5) 停用时关闭同步流
+  ctx.effect(() => () => sync.stop());
 
   // 5) 配对网关：非环回 /api 请求需配对（可选）
   if (cfg.requirePairingForLan) {

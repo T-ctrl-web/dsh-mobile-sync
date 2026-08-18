@@ -111,6 +111,10 @@ a{color:var(--accent)}
 .conn-dot.sse{background:var(--ok);box-shadow:0 0 4px var(--ok)}
 .conn-dot.poll{background:var(--warn)}
 .conn-dot.off{background:var(--muted)}
+/* PC 端同步提示条（双向同步） */
+.pcbar{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);cursor:pointer;flex-shrink:0}
+.pcbar b{color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcbar .go{margin-left:auto;color:var(--accent);flex-shrink:0}
 </style>
 </head>
 <body>
@@ -136,6 +140,8 @@ let state = {
   messages: [],        // 渲染用消息
   pending: [],         // 待审批/提问
   toolCards: new Map(),// callId -> card element
+  pcState: null,       // PC 端同步状态（来自 /m/api/sync）
+  syncES: null,        // 同步状态 EventSource
 };
 const app = document.getElementById('app');
 
@@ -149,6 +155,72 @@ async function api(path, opts={}) {
   return j;
 }
 function sseUrl(path){ const b=state.base.replace(/\/+$/,''); return b+path+(path.includes('?')?'&':'?')+'token='+encodeURIComponent(state.token); }
+
+// ============ 双向同步（PC ↔ 手机 UI 状态镜像）============
+// 手机端状态上报：切换会话 / 切模型 / 切权限 / 发消息时调用，host 再广播给 PC 端
+function reportMobileState(patch){
+  if(!state.base) return;
+  try{
+    fetch(state.base.replace(/\/+$/,'')+'/m/api/sync/mobile-state',{
+      method:'POST',
+      headers:{'content-type':'application/json', ...(state.token?{authorization:'Bearer '+state.token}:{})},
+      body:JSON.stringify(patch),
+    }).catch(()=>{});
+  }catch{ /* ignore */ }
+}
+// 上报当前打开的会话（切换/新建/退出会话时）
+function reportActiveSession(){
+  if(!state.session){ reportMobileState({activeSessionId:null,activeSessionTitle:null}); return; }
+  reportMobileState({activeSessionId:state.session.sessionId, activeSessionTitle:state.session.title||null});
+}
+// 订阅 PC 端状态流（/m/api/sync SSE；SSE 被阻断时降级为 30s 轮询）
+function startSync(){
+  if(!state.base||!state.token) return;
+  if(state.syncES){ state.syncES.close(); state.syncES=null; }
+  let es=null;
+  try{ es=new EventSource(sseUrl('/m/api/sync')); }catch{ es=null; }
+  if(es){
+    es.addEventListener('state',(e)=>{
+      try{ const s=JSON.parse(e.data); state.pcState=s.pc||null; renderPcBar(); }catch{}
+    });
+    es.onerror=()=>{ /* 自动重连 */ };
+    state.syncES=es;
+  }
+  // 兜底轮询：SSE 不可用时也能拿到 PC 状态
+  if(state.syncPollTimer) clearInterval(state.syncPollTimer);
+  state.syncPollTimer=setInterval(async()=>{
+    try{
+      const j=await api('/m/api/sync/state');
+      if(j && j.pc){ state.pcState=j.pc; renderPcBar(); }
+    }catch{ /* 单次失败跳过 */ }
+  },30000);
+}
+function stopSync(){
+  if(state.syncES){ state.syncES.close(); state.syncES=null; }
+  if(state.syncPollTimer){ clearInterval(state.syncPollTimer); state.syncPollTimer=null; }
+}
+// PC 端当前会话提示条（渲染进列表/聊天视图，可点击跳转）
+function pcBarHtml(){
+  const p=state.pcState;
+  if(!p||!p.activeSessionId) return '';
+  const t=p.activeSessionTitle||p.activeSessionId.slice(0,8);
+  return `<div class="pcbar" id="pcBar"><span>💻 电脑正在查看：</span><b>${esc(t)}</b><span class="go">点击切换 ›</span></div>`;
+}
+function bindPcBar(){
+  const el=document.getElementById('pcBar');
+  if(!el) return;
+  el.onclick=openPcSession;
+}
+// 在手机上打开 PC 端正在查看的会话
+function openPcSession(){
+  const p=state.pcState;
+  if(!p||!p.activeSessionId) return;
+  stopStream();
+  state.session={sessionId:p.activeSessionId,title:p.activeSessionTitle||'会话'};
+  state.messages=[];state.lastSeq=0;state.events=[];state.toolCards.clear();
+  loadHistory().then(()=>{ state.view='chat'; render(); });
+  reportActiveSession();
+}
 
 // ============ 极简 Markdown 渲染 ============
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
@@ -212,10 +284,13 @@ function viewLogin(){
 
 // ---- 会话/工作区列表 ----
 async function viewSessions(){
-  app.innerHTML=`<div class="topbar"><h1>会话</h1><button class="btn sec" id="newS" style="padding:6px 10px;font-size:12px">+ 新建</button></div><div class="content" id="lst"><div class="empty">加载中…</div></div>`;
+  app.innerHTML=`<div class="topbar"><h1>会话</h1><button class="btn sec" id="newS" style="padding:6px 10px;font-size:12px">+ 新建</button></div>${pcBarHtml()}<div class="content" id="lst"><div class="empty">加载中…</div></div>`;
+  bindPcBar();
   document.getElementById('newS').onclick=async()=>{
     try{ const r=await api('/api/sessions',{method:'POST',body:JSON.stringify({cwd:state.workspace||''})});
-      state.session={sessionId:r.sessionId,title:'新会话'}; state.messages=[];state.lastSeq=0;state.events=[];render(); }catch(e){alert('新建失败：'+e.message)}
+      state.session={sessionId:r.sessionId,title:'新会话'}; state.messages=[];state.lastSeq=0;state.events=[];render();
+      reportActiveSession();
+    }catch(e){alert('新建失败：'+e.message)}
   };
   const lst=document.getElementById('lst');
   try{
@@ -234,6 +309,7 @@ async function viewSessions(){
       state.session={sessionId:el.dataset.sid,title:el.querySelector('.ttl').textContent};
       state.messages=[];state.lastSeq=0;state.events=[];state.toolCards.clear();
       await loadHistory(); render();
+      reportActiveSession();
     });
   }catch(e){ lst.innerHTML=`<div class="empty">加载失败：${esc(e.message)}<br>请确认 dsh web 已运行</div>`; }
   bindTabbar();
@@ -256,6 +332,7 @@ function viewChat(){
     <h1>${esc(state.session?.title||'对话')}</h1>
     <button id="mdl" style="font-size:12px;color:var(--accent)">模型</button>
   </div>
+  ${pcBarHtml()}
   <div class="content chat" id="chat"></div>
   <div class="chips">
     <span class="chip" id="permChip">权限</span>
@@ -266,7 +343,8 @@ function viewChat(){
     <textarea id="ta" placeholder="输入指令，Enter 发送" rows="1"></textarea>
     <button class="send" id="snd">↑</button>
   </div>`;
-  document.getElementById('bk').onclick=()=>{stopStream();state.session=null;render()};
+  bindPcBar();
+  document.getElementById('bk').onclick=()=>{stopStream();state.session=null;render();reportActiveSession()};
   document.getElementById('mdl').onclick=openModelSheet;
   document.getElementById('modelChip').onclick=openModelSheet;
   document.getElementById('permChip').onclick=openPermSheet;
@@ -366,7 +444,8 @@ function startStream(){
 }
 function trySSE(){
   if(!state.session) return;
-  const es=new EventSource(sseUrl('/api/sessions/'+state.session.sessionId+'/events.stream'));
+  // 带 afterSeq：服务端连接建立时先回放断线期间错过的缓冲事件（离线补同步）
+  const es=new EventSource(sseUrl('/api/sessions/'+state.session.sessionId+'/events.stream?afterSeq='+state.lastSeq));
   state.sse=es;
   es.addEventListener(state.session.sessionId,(e)=>{
     try{ handleEvent(JSON.parse(e.data)); }catch{}
@@ -381,8 +460,18 @@ function trySSE(){
       // SSE 多次失败 → 关闭并切换到轮询（隧道/反代阻断 SSE 时的降级）
       es.close(); state.sse=null;
       startPolling();
+      return;
     }
-    // 未达阈值时 EventSource 自动重连
+    // 手动重连：EventSource 自动重连不会携带最新的 afterSeq，丢失离线补同步能力，
+    // 因此关闭旧连接并用最新 lastSeq + 退避重建
+    if(es.readyState===EventSource.CLOSED || es.readyState===EventSource.CONNECTING){
+      const fail=state.sseFailCount;
+      es.close(); state.sse=null;
+      setTimeout(()=>{
+        if(!state.session || state.connMode==='polling') return;
+        trySSE();
+      }, Math.min(500*fail, 5000));
+    }
   };
 }
 // 轮询模式：定时拉 events 增量 + pending 列表
@@ -454,7 +543,8 @@ async function send(){
   const div=document.createElement('div');div.className='msg';
   div.innerHTML=`<div class="role">你</div><div class="bubble user">${md(text)}</div>`;
   c.appendChild(div);c.scrollTop=c.scrollHeight;
-  try{ await api('/api/sessions/'+state.session.sessionId+'/prompt',{method:'POST',body:JSON.stringify({text})}); }
+  try{ await api('/api/sessions/'+state.session.sessionId+'/prompt',{method:'POST',body:JSON.stringify({text})});
+    reportMobileState({action:'发消息'}); }
   catch(e){ state.messages.push({role:'assistant',text:'⚠ 发送失败：'+e.message}); renderChat(); }
 }
 
@@ -498,6 +588,7 @@ async function openModelSheet(){
     ml.querySelectorAll('.opt').forEach(o=>o.onclick=async()=>{
       try{await api('/api/sessions/'+state.session.sessionId+'/model',{method:'POST',body:JSON.stringify({model:o.dataset.id})});
         state.model=o.dataset.id;LS.set('model',o.dataset.id);bg.remove();document.getElementById('modelChip').textContent=o.dataset.id;
+        reportMobileState({model:o.dataset.id,action:'切换模型 '+o.dataset.id});
       }catch(e){alert('切换失败：'+e.message)}
     });
   }catch(e){ ml.innerHTML='<div class="empty">加载失败：'+esc(e.message)+'</div>'; }
@@ -512,6 +603,7 @@ function openPermSheet(){
   bg.querySelectorAll('.opt').forEach(o=>o.onclick=async()=>{
     try{await api('/api/sessions/'+state.session.sessionId+'/permission',{method:'POST',body:JSON.stringify({mode:o.dataset.m})});
       bg.remove();
+      reportMobileState({permission:o.dataset.m,action:'切换权限 '+o.dataset.m});
     }catch(e){alert('设置失败：'+e.message)}
   });
 }
@@ -575,7 +667,8 @@ function bindTabbar(filesView=false){
 
 // ============ 启动 ============
 render();
-window.addEventListener('beforeunload',()=>stopStream());
+startSync();
+window.addEventListener('beforeunload',()=>{stopStream();stopSync();});
 </script>
 </body>
 </html>

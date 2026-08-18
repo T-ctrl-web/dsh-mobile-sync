@@ -5,6 +5,7 @@ import type { WebRoute } from '@deepseek-ai/dsh-host-webserver';
 import type { PairingService } from './pairing.js';
 import type { EventStore } from './event-store.js';
 import type { ApiProxy } from './dsh-client.js';
+import type { SyncBridge } from './sync.js';
 import {
   readJsonBody, writeJson, writeStatic, requireMethod, openSSE, pushSSE,
 } from './http-utils.js';
@@ -42,7 +43,7 @@ function isLoopback(req: any): boolean {
 }
 
 // ---- 配对路由（仅 loopback）----
-export function makePairRoutes(pairing: PairingService, workspaceParam?: string): WebRoute[] {
+export function makePairRoutes(pairing: PairingService, workspaceParam?: string, sync?: SyncBridge): WebRoute[] {
   return [
     // 签发 QR token
     {
@@ -71,6 +72,7 @@ export function makePairRoutes(pairing: PairingService, workspaceParam?: string)
         } else {
           writeJson(res, 403, { ok: false, error: result.error });
         }
+        sync?.notifyDevices(); // 设备上线 → 广播
       },
     },
     // 心跳
@@ -79,6 +81,7 @@ export function makePairRoutes(pairing: PairingService, workspaceParam?: string)
         if (!requireMethod(req, res, 'POST')) return;
         const ok = pairing.heartbeat(getCookie(req) || '');
         writeJson(res, ok ? 200 : 403, { ok });
+        sync?.notifyDevices();
       },
     },
     // 停止（撤销所有设备）
@@ -88,6 +91,7 @@ export function makePairRoutes(pairing: PairingService, workspaceParam?: string)
         if (!requireMethod(req, res, 'POST')) return;
         pairing.stop();
         writeJson(res, 200, { ok: true });
+        sync?.notifyDevices();
       },
     },
     // 状态（桌面端 SSE）
@@ -107,6 +111,7 @@ export function makeMobileApiRoutes(
   eventStore: EventStore,
   apiProxy: ApiProxy,
   defaultCwd: string,
+  sync: SyncBridge,
 ): WebRoute[] {
   const requireMobile = (req: any, res: any): boolean => {
     if (!pairing.isPaired(getCookie(req))) {
@@ -231,8 +236,12 @@ export function makeMobileApiRoutes(
         try { writeJson(res, 200, await eventStore.getEvents(sid, after)); }
         catch (e: any) { writeJson(res, 502, { error: e.message }); }
       } else if (action === 'events.stream' && req.method === 'GET') {
+        // 离线补同步：连接建立时先回放 afterSeq 之后的缓冲事件（断线期间错过的），再挂实时推送
+        const after = Number(url.searchParams.get('afterSeq')) || 0;
+        const replay = await eventStore.getEvents(sid, after);
         const stream = openSSE(res);
-        pushSSE(stream, '__hello', { sessionId: sid });
+        for (const it of replay.items) pushSSE(stream, sid, it);
+        pushSSE(stream, '__hello', { sessionId: sid, lastSeq: replay.lastSeq });
         eventStore.addSseClient(stream, sid);
         const ka = setInterval(() => { if (!stream.closed) { try { res.write(': keepalive\n\n'); } catch {} } else clearInterval(ka); }, 25000);
       } else {
@@ -319,11 +328,69 @@ export function makeMobileApiRoutes(
     },
   };
 
+  // 双向同步（手机半边）
+  const mobileSyncStateRoute: WebRoute = {
+    kind: 'exact', path: '/m/api/sync/state', handler: (req, res) => {
+      if (!requireMethod(req, res, 'GET') || !requireMobile(req, res)) return;
+      writeJson(res, 200, sync.snapshot());
+    },
+  };
+  const mobileSyncStreamRoute: WebRoute = {
+    kind: 'exact', path: '/m/api/sync', handler: (req, res) => {
+      if (!requireMethod(req, res, 'GET') || !requireMobile(req, res)) return;
+      sync.openMobileStream(res);
+    },
+  };
+  const mobileSyncReportRoute: WebRoute = {
+    kind: 'exact', path: '/m/api/sync/mobile-state', handler: async (req, res) => {
+      if (!requireMethod(req, res, 'POST') || !requireMobile(req, res)) return;
+      const b = await readJsonBody(req);
+      const patch: Record<string, unknown> = {};
+      if (typeof b.activeSessionId === 'string') patch.activeSessionId = b.activeSessionId || null;
+      if (typeof b.activeSessionTitle === 'string') patch.activeSessionTitle = b.activeSessionTitle || null;
+      if (typeof b.model === 'string') patch.model = b.model || null;
+      if (typeof b.permission === 'string') patch.permission = b.permission || null;
+      if (typeof b.action === 'string' && b.action) sync.recordAction('mobile', b.action);
+      sync.setState('mobile', patch);
+      writeJson(res, 200, { ok: true });
+    },
+  };
+
   return [
     rpcProxyRoute, workspacesRoute, sessionsRoute,
     historyRoute, pendingRoute, approveRoute, questionRoute,
     terminalRoute, filesRoute, fileRoute, heartbeatRoute,
+    mobileSyncStateRoute, mobileSyncStreamRoute, mobileSyncReportRoute,
   ];
+}
+
+// ---- 双向同步路由（PC 半边，仅 loopback）----
+export function makeSyncRoutes(sync: SyncBridge): WebRoute[] {
+  // PC client 订阅：实时接收手机端状态 + 设备列表
+  const pcStreamRoute: WebRoute = {
+    kind: 'exact', path: '/api/sync', handler: (req, res) => {
+      if (!isLoopback(req)) return writeJson(res, 403, { error: '仅限本机' });
+      if (!requireMethod(req, res, 'GET')) return;
+      sync.openPcStream(res);
+    },
+  };
+  // PC client 上报：PC 端当前会话 / 模型 / 权限变化
+  const pcReportRoute: WebRoute = {
+    kind: 'exact', path: '/api/sync/pc-state', handler: async (req, res) => {
+      if (!isLoopback(req)) return writeJson(res, 403, { error: '仅限本机' });
+      if (!requireMethod(req, res, 'POST')) return;
+      const b = await readJsonBody(req);
+      const patch: Record<string, unknown> = {};
+      if (typeof b.activeSessionId === 'string') patch.activeSessionId = b.activeSessionId || null;
+      if (typeof b.activeSessionTitle === 'string') patch.activeSessionTitle = b.activeSessionTitle || null;
+      if (typeof b.model === 'string') patch.model = b.model || null;
+      if (typeof b.permission === 'string') patch.permission = b.permission || null;
+      if (typeof b.action === 'string' && b.action) sync.recordAction('pc', b.action);
+      sync.setState('pc', patch);
+      writeJson(res, 200, { ok: true });
+    },
+  };
+  return [pcStreamRoute, pcReportRoute];
 }
 
 // ---- 移动端静态页面路由 ----

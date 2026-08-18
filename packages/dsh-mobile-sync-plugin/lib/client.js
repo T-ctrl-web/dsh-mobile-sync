@@ -11,13 +11,50 @@ window.__ModuleLoader__.load({
 		var useState = __dep_react.useState;
 		var jsx = __dep_react_jsx_runtime.jsx;
 		var jsxs = __dep_react_jsx_runtime.jsxs;
+		//#region src/client/bridge.ts
+		/** 由 client/index.ts 在 apply() 时注入：打开指定会话（PC 端 DSH 主界面跳转） */
+		let openSessionFn = null;
+		function setOpenSession(fn) {
+			openSessionFn = fn;
+		}
+		/** 向 host 同步桥上报 PC 端状态（host 再广播给手机） */
+		function reportPcState(patch) {
+			try {
+				fetch("/api/sync/pc-state", {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify(patch),
+					keepalive: true
+				}).catch(() => {});
+			} catch {}
+		}
+		//#endregion
 		//#region src/client/FooterRemoteEntry.tsx
+		const fmtTime = (t) => {
+			if (!t) return "";
+			const d = new Date(t);
+			const now = /* @__PURE__ */ new Date();
+			const pad = (n) => String(n).padStart(2, "0");
+			if (d.toDateString() === now.toDateString()) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+			return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+		};
 		const FooterRemoteEntry = ({ wide }) => {
 			const [open, setOpen] = useState(false);
 			const [snapshot, setSnapshot] = useState(null);
+			const [sync, setSync] = useState(null);
 			const [loading, setLoading] = useState(false);
 			const [copied, setCopied] = useState(false);
 			const [error, setError] = useState(null);
+			useEffect(() => {
+				const es = new EventSource("/api/sync");
+				es.addEventListener("state", (e) => {
+					try {
+						setSync(JSON.parse(e.data));
+					} catch {}
+				});
+				es.onerror = () => {};
+				return () => es.close();
+			}, []);
 			const issue = useCallback(async () => {
 				setLoading(true);
 				setError(null);
@@ -63,15 +100,18 @@ window.__ModuleLoader__.load({
 				snapshot,
 				issue
 			]);
-			const onlineDevices = snapshot?.devices?.filter((d) => d.online) || [];
-			const offlineDevices = snapshot?.devices?.filter((d) => !d.online) || [];
-			const stateLabel = onlineDevices.length ? `${onlineDevices.length} 台在线` : offlineDevices.length ? `${offlineDevices.length} 台离线` : "等待手机连接";
-			const stateColor = onlineDevices.length ? "#4caf50" : offlineDevices.length ? "#888" : "#f0a020";
+			const onlineCount = sync?.devices?.filter((d) => d.online).length || 0;
+			const totalDevices = sync?.devices?.length || 0;
+			const dotColor = onlineCount > 0 ? "#4caf50" : totalDevices > 0 ? "#888" : "#f0a020";
+			const dotTitle = onlineCount > 0 ? `${onlineCount} 台手机在线` : totalDevices > 0 ? "手机已配对但离线" : "等待手机连接";
+			const mobile = sync?.mobile;
+			const pc = sync?.pc;
+			const hasMobileSession = !!mobile?.activeSessionId;
 			return /* @__PURE__ */ jsxs("div", {
 				style: { position: "relative" },
-				children: [/* @__PURE__ */ jsx("button", {
+				children: [/* @__PURE__ */ jsxs("button", {
 					onClick: () => setOpen(!open),
-					title: "手机远程控制",
+					title: dotTitle,
 					style: {
 						width: 36,
 						height: 36,
@@ -84,9 +124,10 @@ window.__ModuleLoader__.load({
 						alignItems: "center",
 						justifyContent: "center",
 						fontSize: 18,
-						transition: "background 120ms"
+						transition: "background 120ms",
+						position: "relative"
 					},
-					children: /* @__PURE__ */ jsxs("svg", {
+					children: [/* @__PURE__ */ jsxs("svg", {
 						width: "18",
 						height: "18",
 						viewBox: "0 0 24 24",
@@ -102,14 +143,23 @@ window.__ModuleLoader__.load({
 							height: "20",
 							rx: "2"
 						}), /* @__PURE__ */ jsx("path", { d: "M12 18h.01" })]
-					})
+					}), /* @__PURE__ */ jsx("span", { style: {
+						position: "absolute",
+						right: 3,
+						bottom: 3,
+						width: 8,
+						height: 8,
+						borderRadius: "50%",
+						background: dotColor,
+						border: "1.5px solid var(--surface, #1a1a1f)"
+					} })]
 				}), open && /* @__PURE__ */ jsxs("div", {
 					style: {
 						position: "absolute",
 						bottom: "100%",
 						right: 0,
 						marginBottom: 8,
-						width: wide ? 360 : 300,
+						width: wide ? 380 : 320,
 						background: "var(--surface, #1a1a1f)",
 						border: "1px solid var(--border, #333)",
 						borderRadius: 12,
@@ -117,7 +167,9 @@ window.__ModuleLoader__.load({
 						boxShadow: "0 8px 32px rgba(0,0,0,.4)",
 						zIndex: 100,
 						fontSize: 14,
-						color: "var(--text, #ececec)"
+						color: "var(--text, #ececec)",
+						maxHeight: "70vh",
+						overflowY: "auto"
 					},
 					children: [
 						/* @__PURE__ */ jsx("div", {
@@ -137,6 +189,95 @@ window.__ModuleLoader__.load({
 						}),
 						/* @__PURE__ */ jsxs("div", {
 							style: {
+								border: "1px solid var(--border, #333)",
+								borderRadius: 10,
+								padding: 10,
+								marginBottom: 12,
+								background: "var(--bg-muted, #222)"
+							},
+							children: [
+								/* @__PURE__ */ jsxs("div", {
+									style: {
+										fontSize: 12,
+										fontWeight: 600,
+										marginBottom: 8,
+										display: "flex",
+										alignItems: "center",
+										gap: 6
+									},
+									children: [/* @__PURE__ */ jsx("span", { style: {
+										width: 7,
+										height: 7,
+										borderRadius: "50%",
+										background: dotColor
+									} }), "双向实时同步"]
+								}),
+								/* @__PURE__ */ jsxs("div", {
+									style: {
+										fontSize: 12,
+										marginBottom: 6
+									},
+									children: [/* @__PURE__ */ jsx("span", {
+										style: { color: "var(--text-muted)" },
+										children: "手机端："
+									}), hasMobileSession ? /* @__PURE__ */ jsx("span", {
+										style: { color: "var(--text)" },
+										children: mobile?.activeSessionTitle || (mobile?.activeSessionId || "").slice(0, 8)
+									}) : /* @__PURE__ */ jsx("span", {
+										style: { color: "var(--text-muted)" },
+										children: onlineCount ? "已连接，尚未打开会话" : "未连接"
+									})]
+								}),
+								mobile?.lastAction && onlineCount > 0 && /* @__PURE__ */ jsxs("div", {
+									style: {
+										fontSize: 11,
+										color: "var(--text-muted)",
+										marginBottom: 6
+									},
+									children: [
+										/* @__PURE__ */ jsx("span", {
+											style: { color: "var(--accent, #4a90d9)" },
+											children: mobile.lastAction
+										}),
+										" · ",
+										fmtTime(mobile.lastActionAt)
+									]
+								}),
+								hasMobileSession && (() => {
+									const targetId = mobile?.activeSessionId || null;
+									return /* @__PURE__ */ jsx("button", {
+										onClick: () => {
+											if (openSessionFn && targetId) openSessionFn(targetId);
+										},
+										style: {
+											width: "100%",
+											padding: "6px 0",
+											borderRadius: 8,
+											fontSize: 12,
+											fontWeight: 600,
+											background: "var(--accent, #4a90d9)",
+											color: "#fff",
+											border: "none",
+											cursor: "pointer"
+										},
+										children: "在电脑上打开该会话"
+									});
+								})(),
+								pc?.activeSessionId && /* @__PURE__ */ jsxs("div", {
+									style: {
+										fontSize: 12,
+										marginTop: 8,
+										color: "var(--text-muted)"
+									},
+									children: ["电脑当前会话：", /* @__PURE__ */ jsx("span", {
+										style: { color: "var(--text)" },
+										children: pc.activeSessionTitle || pc.activeSessionId.slice(0, 8)
+									})]
+								})
+							]
+						}),
+						/* @__PURE__ */ jsxs("div", {
+							style: {
 								display: "flex",
 								alignItems: "center",
 								gap: 6,
@@ -147,37 +288,37 @@ window.__ModuleLoader__.load({
 									width: 8,
 									height: 8,
 									borderRadius: "50%",
-									background: stateColor
+									background: dotColor
 								} }),
 								/* @__PURE__ */ jsx("span", {
 									style: { fontSize: 13 },
-									children: stateLabel
+									children: onlineCount > 0 ? `${onlineCount} 台在线` : totalDevices > 0 ? `${totalDevices} 台已配对（离线）` : "等待手机连接"
 								}),
-								snapshot?.devices?.length ? /* @__PURE__ */ jsxs("span", {
+								totalDevices > 0 && /* @__PURE__ */ jsxs("span", {
 									style: {
 										fontSize: 11,
 										color: "var(--text-muted)"
 									},
 									children: [
 										"共 ",
-										snapshot.devices.length,
+										totalDevices,
 										" 台（",
-										onlineDevices.length,
+										onlineCount,
 										" 在线 / ",
-										offlineDevices.length,
+										totalDevices - onlineCount,
 										" 离线）"
 									]
-								}) : null
+								})
 							]
 						}),
-						snapshot?.devices?.length ? /* @__PURE__ */ jsx("div", {
+						sync?.devices?.length ? /* @__PURE__ */ jsx("div", {
 							style: {
 								marginBottom: 12,
 								display: "flex",
 								flexDirection: "column",
 								gap: 4
 							},
-							children: snapshot.devices.map((d) => /* @__PURE__ */ jsxs("div", {
+							children: sync.devices.map((d, i) => /* @__PURE__ */ jsxs("div", {
 								style: {
 									display: "flex",
 									alignItems: "center",
@@ -198,7 +339,7 @@ window.__ModuleLoader__.load({
 										children: d.online ? "在线" : "离线"
 									})
 								]
-							}, d.cookie))
+							}, i))
 						}) : null,
 						loading ? /* @__PURE__ */ jsx("div", {
 							style: {
@@ -335,8 +476,37 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region src/client/index.ts
 		const NS = "mobile-sync";
-		const inject = ["slots", "locale"];
+		const inject = [
+			"slots",
+			"locale",
+			"sessions"
+		];
 		function apply(ctx) {
+			setOpenSession((sessionId) => {
+				try {
+					ctx.sessions.open(sessionId);
+				} catch {}
+			});
+			ctx.effect(() => {
+				let lastReport = "";
+				const report = () => {
+					try {
+						const st = ctx.sessions.list.getSnapshot();
+						const current = st?.current;
+						const title = current ? st?.byId?.[current]?.displayTitle : null;
+						const key = String(current || "") + "|" + String(title || "");
+						if (key === lastReport) return;
+						lastReport = key;
+						reportPcState({
+							activeSessionId: current ?? null,
+							activeSessionTitle: title ?? null
+						});
+					} catch {}
+				};
+				const unsub = ctx.sessions.list.subscribe(report);
+				report();
+				return unsub;
+			});
 			ctx.slots.inject("sidebar.footer.action", () => ctx.slots.register({
 				name: "sidebar.footer.action",
 				id: "mobile-sync",

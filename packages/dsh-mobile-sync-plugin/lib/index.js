@@ -748,7 +748,7 @@ function isLoopback(req) {
 	const addr = req.socket?.remoteAddress || "";
 	return addr === "127.0.0.1" || addr === "::1" || addr === "::ffff:127.0.0.1";
 }
-function makePairRoutes(pairing, workspaceParam) {
+function makePairRoutes(pairing, workspaceParam, sync) {
 	return [
 		{
 			kind: "exact",
@@ -781,6 +781,7 @@ function makePairRoutes(pairing, workspaceParam) {
 					ok: false,
 					error: result.error
 				});
+				sync?.notifyDevices();
 			}
 		},
 		{
@@ -790,6 +791,7 @@ function makePairRoutes(pairing, workspaceParam) {
 				if (!requireMethod(req, res, "POST")) return;
 				const ok = pairing.heartbeat(getCookie(req) || "");
 				writeJson(res, ok ? 200 : 403, { ok });
+				sync?.notifyDevices();
 			}
 		},
 		{
@@ -800,6 +802,7 @@ function makePairRoutes(pairing, workspaceParam) {
 				if (!requireMethod(req, res, "POST")) return;
 				pairing.stop();
 				writeJson(res, 200, { ok: true });
+				sync?.notifyDevices();
 			}
 		},
 		{
@@ -813,7 +816,7 @@ function makePairRoutes(pairing, workspaceParam) {
 		}
 	];
 }
-function makeMobileApiRoutes(pairing, eventStore, apiProxy, defaultCwd) {
+function makeMobileApiRoutes(pairing, eventStore, apiProxy, defaultCwd, sync) {
 	const requireMobile = (req, res) => {
 		if (!pairing.isPaired(getCookie(req))) {
 			writeJson(res, 403, { error: "设备未配对或已离线" });
@@ -986,8 +989,14 @@ function makeMobileApiRoutes(pairing, eventStore, apiProxy, defaultCwd) {
 						writeJson(res, 502, { error: e.message });
 					}
 				} else if (action === "events.stream" && req.method === "GET") {
+					const after = Number(url.searchParams.get("afterSeq")) || 0;
+					const replay = await eventStore.getEvents(sid, after);
 					const stream = openSSE(res);
-					pushSSE(stream, "__hello", { sessionId: sid });
+					for (const it of replay.items) pushSSE(stream, sid, it);
+					pushSSE(stream, "__hello", {
+						sessionId: sid,
+						lastSeq: replay.lastSeq
+					});
 					eventStore.addSseClient(stream, sid);
 					const ka = setInterval(() => {
 						if (!stream.closed) try {
@@ -1100,8 +1109,67 @@ function makeMobileApiRoutes(pairing, eventStore, apiProxy, defaultCwd) {
 				if (!requireMethod(req, res, "POST") || !requireMobile(req, res)) return;
 				writeJson(res, 200, { ok: true });
 			}
+		},
+		{
+			kind: "exact",
+			path: "/m/api/sync/state",
+			handler: (req, res) => {
+				if (!requireMethod(req, res, "GET") || !requireMobile(req, res)) return;
+				writeJson(res, 200, sync.snapshot());
+			}
+		},
+		{
+			kind: "exact",
+			path: "/m/api/sync",
+			handler: (req, res) => {
+				if (!requireMethod(req, res, "GET") || !requireMobile(req, res)) return;
+				sync.openMobileStream(res);
+			}
+		},
+		{
+			kind: "exact",
+			path: "/m/api/sync/mobile-state",
+			handler: async (req, res) => {
+				if (!requireMethod(req, res, "POST") || !requireMobile(req, res)) return;
+				const b = await readJsonBody(req);
+				const patch = {};
+				if (typeof b.activeSessionId === "string") patch.activeSessionId = b.activeSessionId || null;
+				if (typeof b.activeSessionTitle === "string") patch.activeSessionTitle = b.activeSessionTitle || null;
+				if (typeof b.model === "string") patch.model = b.model || null;
+				if (typeof b.permission === "string") patch.permission = b.permission || null;
+				if (typeof b.action === "string" && b.action) sync.recordAction("mobile", b.action);
+				sync.setState("mobile", patch);
+				writeJson(res, 200, { ok: true });
+			}
 		}
 	];
+}
+function makeSyncRoutes(sync) {
+	return [{
+		kind: "exact",
+		path: "/api/sync",
+		handler: (req, res) => {
+			if (!isLoopback(req)) return writeJson(res, 403, { error: "仅限本机" });
+			if (!requireMethod(req, res, "GET")) return;
+			sync.openPcStream(res);
+		}
+	}, {
+		kind: "exact",
+		path: "/api/sync/pc-state",
+		handler: async (req, res) => {
+			if (!isLoopback(req)) return writeJson(res, 403, { error: "仅限本机" });
+			if (!requireMethod(req, res, "POST")) return;
+			const b = await readJsonBody(req);
+			const patch = {};
+			if (typeof b.activeSessionId === "string") patch.activeSessionId = b.activeSessionId || null;
+			if (typeof b.activeSessionTitle === "string") patch.activeSessionTitle = b.activeSessionTitle || null;
+			if (typeof b.model === "string") patch.model = b.model || null;
+			if (typeof b.permission === "string") patch.permission = b.permission || null;
+			if (typeof b.action === "string" && b.action) sync.recordAction("pc", b.action);
+			sync.setState("pc", patch);
+			writeJson(res, 200, { ok: true });
+		}
+	}];
 }
 function makeMobileRoutes() {
 	const relayPath1 = path.join(__dirname, "assets", "relay.html");
@@ -1188,6 +1256,92 @@ function runTerminal(command, cwd) {
 	});
 }
 //#endregion
+//#region src/sync.ts
+const emptyState = () => ({
+	activeSessionId: null,
+	activeSessionTitle: null,
+	model: null,
+	permission: null,
+	lastAction: null,
+	lastActionAt: null
+});
+function createSyncBridge() {
+	const pc = emptyState();
+	const mobile = emptyState();
+	const pcStreams = /* @__PURE__ */ new Set();
+	const mobileStreams = /* @__PURE__ */ new Set();
+	let deviceSource = null;
+	const devices = () => deviceSource ? deviceSource() : [];
+	function snapshot() {
+		return {
+			pc: { ...pc },
+			mobile: { ...mobile },
+			devices: devices(),
+			ts: Date.now()
+		};
+	}
+	function broadcast() {
+		const snap = snapshot();
+		for (const s of pcStreams) if (!s.closed) pushSSE(s, "state", snap);
+		for (const s of mobileStreams) if (!s.closed) pushSSE(s, "state", snap);
+	}
+	function setState(side, patch) {
+		const target = side === "pc" ? pc : mobile;
+		let changed = false;
+		for (const [k, v] of Object.entries(patch)) if (v !== void 0 && target[k] !== v) {
+			target[k] = v;
+			changed = true;
+		}
+		if (changed) broadcast();
+	}
+	function recordAction(side, action) {
+		setState(side, {
+			lastAction: action,
+			lastActionAt: Date.now()
+		});
+	}
+	function openStream(res, streams) {
+		const stream = openSSE(res);
+		streams.add(stream);
+		pushSSE(stream, "state", snapshot());
+		res.on("close", () => {
+			streams.delete(stream);
+		});
+		const ka = setInterval(() => {
+			if (!stream.closed) try {
+				pushSSE(stream, "state", snapshot());
+			} catch {}
+			else clearInterval(ka);
+		}, 25e3);
+		return stream;
+	}
+	return {
+		snapshot,
+		setState,
+		recordAction,
+		notifyDevices: () => broadcast(),
+		setDeviceSource: (fn) => {
+			deviceSource = fn;
+		},
+		openPcStream: (res) => {
+			openStream(res, pcStreams);
+		},
+		openMobileStream: (res) => {
+			openStream(res, mobileStreams);
+		},
+		stop: () => {
+			for (const s of pcStreams) if (!s.closed) try {
+				s.res.end();
+			} catch {}
+			for (const s of mobileStreams) if (!s.closed) try {
+				s.res.end();
+			} catch {}
+			pcStreams.clear();
+			mobileStreams.clear();
+		}
+	};
+}
+//#endregion
 //#region src/config.ts
 const DEFAULT_CONFIG = {
 	mobileEnterToSend: true,
@@ -1221,14 +1375,20 @@ function apply(ctx, config = {}) {
 		qrOrigin = `http://${webServerHost && webServerHost !== "0.0.0.0" ? webServerHost : lanIp || "127.0.0.1"}:${port}`;
 	}
 	const pairing = new PairingService(qrOrigin, cfg.publicBaseUrl);
+	const sync = createSyncBridge();
+	sync.setDeviceSource(() => pairing.snapshot().devices.map((d) => ({
+		label: d.label,
+		online: d.online
+	})));
 	const eventStore = createEventStore({
 		dshBaseUrl,
 		apiProxy: ctx.apiProxy
 	});
 	const allRoutes = [
-		...makePairRoutes(pairing),
+		...makePairRoutes(pairing, void 0, sync),
+		...makeSyncRoutes(sync),
 		...makeMobileRoutes(),
-		...makeMobileApiRoutes(pairing, eventStore, ctx.apiProxy, process.cwd())
+		...makeMobileApiRoutes(pairing, eventStore, ctx.apiProxy, process.cwd(), sync)
 	];
 	ctx.effect(() => {
 		const disposers = allRoutes.map((route) => ctx.webServer.register(route));
@@ -1242,6 +1402,7 @@ function apply(ctx, config = {}) {
 			eventStore.stop();
 		};
 	});
+	ctx.effect(() => () => sync.stop());
 	if (cfg.requirePairingForLan) ctx.on("api/gate", (evt) => {
 		const req = evt?.request;
 		if (!req) return;

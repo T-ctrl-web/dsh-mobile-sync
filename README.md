@@ -118,6 +118,8 @@ location / {
 | 能力 | 说明 |
 |---|---|
 | 多轮对话 | 发消息、Markdown 渲染、流式打字机回复 |
+| 双向实时同步 | PC ↔ 手机 UI 状态镜像：当前会话、模型、权限、最近操作两端实时可见、可互相跳转 |
+| 离线补同步 | 手机断线重连后自动补齐错过的会话事件（环形缓冲回放 + 历史回填） |
 | SSE 实时 | `events.mux` 事件流，打开会话即实时收事件 |
 | 审批卡片 | 危险操作弹卡，允许/拒绝 |
 | 提问卡片 | `ask_user_question` 弹卡，选项/自定义回答 |
@@ -127,6 +129,20 @@ location / {
 | 文件浏览 | 浏览电脑目录、查看文件内容 |
 | 终端 | 手机远程执行电脑命令 |
 | 会话管理 | 工作区/会话列表、新建会话 |
+
+## 双向镜像同步
+
+会话事件流（`events.mux`）天然双向：手机发消息/审批/回答提问，PC 端 DSH 主界面实时可见；PC 端操作同样实时推送到手机。在此基础上，插件额外同步**纯 UI 状态**（这些不产生会话事件，两端原本互相不可见）：
+
+| 同步内容 | 方向 | 表现 |
+|---|---|---|
+| 当前打开的会话 | PC → 手机 | 手机端出现「💻 电脑正在查看：xxx」提示条，点击即切到该会话 |
+| 当前打开的会话 | 手机 → PC | PC 端侧边栏手机图标显示手机端会话名，面板可一键「在电脑上打开该会话」 |
+| 模型 / 权限切换 | 双向 | 手机端切换后上报，PC 面板显示最近操作 |
+| 最近操作 | 手机 → PC | 「发消息 / 切换模型 xxx / 切换权限 xxx」+ 时间，显示在 PC 面板 |
+| 设备在线状态 | 手机 → PC | 侧边栏图标右下角常驻状态点（绿=在线 / 灰=离线 / 黄=等待） |
+
+**离线补同步**：手机断线期间错过的事件不会丢——重连时 `events.stream` 携带 `afterSeq` 参数，服务端先回放环形缓冲（每会话 200 条）中该水位之后的事件，缓冲缺口再自动回填 `session.history`；SSE 被阻断时自动降级为 1.5s 轮询增量拉取，机制相同。
 
 ## 连接模式自动切换
 
@@ -147,8 +163,13 @@ location / {
 | POST | `/api/pair/heartbeat` | 设备心跳 |
 | POST | `/api/pair/stop` | 撤销所有设备（仅 loopback） |
 | GET | `/api/pair/status` | 配对状态 SSE（仅 loopback） |
+| GET | `/api/sync` | PC 端同步状态 SSE（仅 loopback） |
+| POST | `/api/sync/pc-state` | PC 端上报当前会话/模型/权限（仅 loopback） |
 | GET | `/m/` | 移动端页面 |
 | GET | `/m/pair?token=` | 配对中转页 |
+| GET | `/m/api/sync` | 手机端同步状态 SSE（推送 PC 状态 + 设备列表） |
+| GET | `/m/api/sync/state` | 手机端同步状态快照（轮询兜底） |
+| POST | `/m/api/sync/mobile-state` | 手机端上报当前会话/模型/权限/最近操作 |
 | GET | `/m/api/workspaces` | 工作区列表 |
 | GET | `/m/api/sessions` | 会话列表 |
 | POST | `/m/api/sessions` | 新建会话 |
@@ -187,33 +208,47 @@ dsh-mobile-sync/
 │       │   ├── index.ts               # host 入口（路由 + 配对 + 事件中继）
 │       │   ├── config.ts              # 配置 schema
 │       │   ├── pairing.ts             # QR 配对服务
+│       │   ├── sync.ts                # 双向同步桥（PC ↔ 手机 UI 状态镜像）
 │       │   ├── dsh-client.ts          # DSH RPC 客户端 + 事件归一化
 │       │   ├── event-store.ts          # events.mux 中继 + 环形缓冲
 │       │   ├── http-utils.ts          # HTTP/SSE 工具函数
-│       │   ├── routes.ts               # 全部路由（配对 + 移动端 API + 静态页）
+│       │   ├── routes.ts               # 全部路由（配对 + 同步 + 移动端 API + 静态页）
 │       │   └── client/                # 浏览器半边
-│       │       ├── index.ts           # 侧边栏 UI 注入
-│       │       ├── RemoteEntry.tsx     # 配对面板（QR + 状态 + 操作）
-│       │       └── FooterRemoteEntry.tsx # 侧边栏手机图标
+│       │       ├── index.ts           # 侧边栏 UI 注入 + PC 会话监听上报
+│       │       ├── bridge.ts          # client 半边与同步桥的通信层
+│       │       └── FooterRemoteEntry.tsx # 侧边栏手机图标 + 配对/同步面板
 │       ├── assets/
-│       │   └── relay.html             # 移动端单文件前端
+│       │   └── relay.html             # 移动端单文件前端（含双向同步）
 │       ├── cordis.patch.yml           # 插件注册
 │       ├── tsconfig.json
 │       └── tsdown.config.ts
 ├── agent.mjs                          # 独立中继（零依赖）
+├── src/
+│   ├── sync.mjs                       # 双向同步桥（零依赖版）
+│   └── ...                            # 其余同插件（server/event-store/dsh-client/config）
 ├── config.example.json
 └── README.md
 ```
 
 ## 技术细节
 
-### 双面 Cordis 插件
+### 双向同步桥（SyncBridge）
 
-插件分 host 半边和 client 半边：
-- **host**（`lib/index.js`）：在 Node.js 运行，注册 HTTP 路由、管理配对、中继事件
-- **client**（`lib/client.js`）：在浏览器运行，注入侧边栏 UI
+`src/sync.ts`（插件）/ `src/sync.mjs`（独立中继）维护两端 UI 状态并双向广播：
 
-通过 `package.json` 的 `dsh.client.inject` 声明依赖，`exports["./client"]` 指向 client 入口。
+```
+PC client 半边 ──POST /api/sync/pc-state──▶ SyncBridge ──SSE /m/api/sync──▶ 手机
+手机 relay.html ──POST /m/api/sync/mobile-state──▶ SyncBridge ──SSE /api/sync──▶ PC
+```
+
+- PC 半边由 client 入口订阅 `ctx.sessions.list`（ObservableSnapshot），当前会话变化即上报
+- 手机半边在切换会话 / 切模型 / 切权限 / 发消息时上报
+- 两端都可通过 SSE 实时收到对方状态；同步流每 25s 推一次完整快照（兼做设备在线状态刷新）
+- 手机端另有 `/m/api/sync/state` 轮询兜底，SSE 被阻断（如 QuickTunnel）时 30s 拉一次
+
+### 离线补同步
+
+`events.stream` 接受 `afterSeq` 参数：连接建立时先回放缓冲中该水位之后的事件（环形缓冲每会话 200 条），缺口自动回填 `session.history`（5s 冷却防抖）。手机端重连时用最新 `lastSeq` 重建 EventSource（带退避），SSE 连续失败 3 次自动降级轮询，轮询本身即增量拉取，两种模式都不丢事件。
 
 ### 事件中继
 
@@ -240,6 +275,8 @@ dsh-mobile-sync/
 | 流式不实时 | Cloudflare QuickTunnel 不转发 SSE——换 Tailscale 或持久隧道 |
 | Agent 提问无响应 | 确认手机打开了会话页（SSE 在线） |
 | 工具结果为空 | DSH 版本字段差异；检查 `tool/result` 双层嵌套 |
+| 手机看不到「电脑正在查看」提示条 | PC 端 DSH 主界面当前没有打开任何会话；或插件 client 半边未加载（`dsh plugin --profile web list` 确认） |
+| 手机离线期间的消息没补上 | 断线超过环形缓冲上限（200 条）后需回填 history；确认手机端网络恢复后 EventSource 已重连（顶栏圆点为绿色） |
 
 ## License
 
