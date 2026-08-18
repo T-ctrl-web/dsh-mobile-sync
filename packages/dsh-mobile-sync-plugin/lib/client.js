@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
-//#region src/client/RemoteEntry.tsx
-const RemoteEntry = ({ wide }) => {
+//#region src/client/FooterRemoteEntry.tsx
+const FooterRemoteEntry = ({ wide }) => {
 	const [open, setOpen] = useState(false);
 	const [snapshot, setSnapshot] = useState(null);
 	const [loading, setLoading] = useState(false);
@@ -60,7 +60,7 @@ const RemoteEntry = ({ wide }) => {
 		style: { position: "relative" },
 		children: [/* @__PURE__ */ jsx("button", {
 			onClick: () => setOpen(!open),
-			title: "移动端远程控制",
+			title: "手机远程控制",
 			style: {
 				width: 36,
 				height: 36,
@@ -322,80 +322,15 @@ const RemoteEntry = ({ wide }) => {
 	});
 };
 //#endregion
-//#region src/client/FooterRemoteEntry.tsx
-const FooterRemoteEntry = ({ open: openProp, onToggle }) => {
-	const [internal, setInternal] = useState(false);
-	const open = openProp ?? internal;
-	const toggle = () => {
-		const next = !open;
-		if (onToggle) onToggle(next);
-		else setInternal(next);
-	};
-	return /* @__PURE__ */ jsx("button", {
-		onClick: toggle,
-		title: "手机远程控制",
-		style: {
-			width: 36,
-			height: 36,
-			border: "none",
-			borderRadius: 8,
-			background: open ? "var(--accent, #4a90d9)" : "transparent",
-			color: open ? "#fff" : "var(--text-secondary, #9a9a9a)",
-			cursor: "pointer",
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "center",
-			fontSize: 18,
-			transition: "background 120ms"
-		},
-		children: /* @__PURE__ */ jsxs("svg", {
-			width: "18",
-			height: "18",
-			viewBox: "0 0 24 24",
-			fill: "none",
-			stroke: "currentColor",
-			strokeWidth: "2",
-			strokeLinecap: "round",
-			strokeLinejoin: "round",
-			children: [/* @__PURE__ */ jsx("rect", {
-				x: "5",
-				y: "2",
-				width: "14",
-				height: "20",
-				rx: "2"
-			}), /* @__PURE__ */ jsx("path", { d: "M12 18h.01" })]
-		})
-	});
-};
-//#endregion
 //#region src/client/index.ts
 const NS = "mobile-sync";
-const inject = [
-	"slots",
-	"locale",
-	"connection",
-	"settingsScope"
-];
+const inject = ["slots", "locale"];
 function apply(ctx) {
-	ctx.slots.inject("sidebar.remote", () => {
-		const disposeEntry = ctx.slots.register({
-			name: "sidebar.remote",
-			locale: "sidebar"
-		}, RemoteEntry);
-		return () => {
-			disposeEntry();
-		};
-	});
-	ctx.slots.inject("sidebar.footer.action", () => {
-		const disposeFooter = ctx.slots.register({
-			name: "sidebar.footer.action",
-			id: "mobile-sync",
-			locale: "sidebar"
-		}, FooterRemoteEntry);
-		return () => {
-			disposeFooter();
-		};
-	});
+	ctx.slots.inject("sidebar.footer.action", () => ctx.slots.register({
+		name: "sidebar.footer.action",
+		id: "mobile-sync",
+		locale: "sidebar"
+	}, FooterRemoteEntry));
 }
 //#endregion
 export { NS, apply, inject };

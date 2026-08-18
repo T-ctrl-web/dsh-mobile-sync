@@ -5682,17 +5682,6 @@ declare module '@deepseek-ai/cordis' {
 declare const NS = "mobile-sync";
 declare const inject: string[];
 declare function apply(ctx: ClientContext): void;
-declare module '@deepseek-ai/dsh-client-ui-slots' {
-  interface SlotMap {
-    'sidebar.remote': {
-      kind: 'single';
-      scope: 'root';
-      owner: {
-        wide: boolean;
-      };
-    };
-  }
-}
 //#endregion
 export { NS, apply, inject };
 //# sourceMappingURL=client.d.ts.map
