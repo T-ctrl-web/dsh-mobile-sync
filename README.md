@@ -1,117 +1,101 @@
 # DSH Mobile Sync — 手机远程控制 DeepSeek Harness
 
-把 DSH 装进口袋——在手机上远程操作电脑上的 Agent：发消息、看流式回复、批准工具调用、回答 Agent 提问、切模型/权限、翻文件、跑终端命令。
+把 DSH 装进口袋——在手机上远程操作电脑上的 Agent：发消息、看流式回复、批准工具调用、回答 Agent 提问、切模型/权限、翻文件、跑终端命令。**PC 与手机双向实时同步**：一端切换会话/模型/操作，另一端实时可见、可互相跳转。
 
-提供两种部署方式：**Cordis 插件**（推荐，原生集成）和**独立中继**（零依赖，clone 即跑）。
+提供两种部署方式：**Cordis 插件**（推荐，原生集成进 DSH Web）和**独立中继**（零依赖，clone 即跑）。
+
+> **兼容性**：适配 DSH `0.1.0-rc.7`（ApiProxy 结构化命名空间 API）。其他版本可能需微调 `src/dsh-client.ts` 的调用层。
+
+---
 
 ## 架构
 
 ```
-┌──────────────┐   扫码配对 / Tailscale / 隧道   ┌──────────────────┐
-│  手机浏览器   │ ──────────────────────────────▶ │  DSH Web 网关     │
-│  /m 移动端   │ ◀── SSE 流式 + Cookie 鉴权 ──── │  Cordis 插件路由  │
-│  relay.html  │                                 │  事件中继 + RPC   │
-└──────────────┘                                 └──────────────────┘
+┌──────────────┐   扫码配对 / 局域网 / 隧道    ┌──────────────────────┐
+│  手机浏览器   │ ────────────────────────────▶ │  DSH Web（0.0.0.0）   │
+│  /m 移动端   │ ◀── SSE 流式 + Cookie 鉴权 ── │  Cordis 插件路由      │
+│  relay.html  │                               │  事件中继 + ApiProxy  │
+└──────────────┘                               └──────────────────────┘
 ```
 
-插件是 DSH 的"内嵌翻译层"：对手机做 HTTP/SSE 服务端（`/m` 路径），对 DSH 内部做 `ApiProxy` RPC + `events.mux` WebSocket 中继。
+插件是 DSH 的"内嵌翻译层"：对手机做 HTTP/SSE 服务端（`/m` 路径），对 DSH 内部通过 `ctx.apiProxy` 结构化 RPC + `events.mux` WebSocket 事件中继。
 
-## 方式一：Cordis 插件（推荐）
+---
 
-### 前置条件
+## 从 GitHub 部署到你的电脑（插件模式）
 
-- 已安装 **DeepSeek Harness**（`npx @deepseek-ai/dsh web`）
-- **Node.js 22+**
-- **pnpm**（用于构建插件）
+### 1. 前置条件
 
-### 安装
+| 依赖 | 说明 |
+|---|---|
+| DeepSeek Harness | 已安装并跑通 `dsh web`（`npx @deepseek-ai/dsh web`） |
+| Node.js | **22+** |
+| pnpm | `npm i -g pnpm` |
+| Git | 拉取代码 |
 
-```bash
-cd packages/dsh-mobile-sync-plugin
-pnpm install          # 安装依赖
-pnpm build            # 构建（tsc 类型检查 + tsdown 打包）
+### 2. 拉取代码（建议放到独立目录）
+
+```powershell
+git clone https://github.com/T-ctrl-web/dsh-mobile-sync.git D:\DeepSeek-Harness\plugins\dsh-mobile-sync
 ```
 
-构建产物在 `lib/` 目录：
-- `lib/index.js` — host 半边（路由 + 配对 + 事件中继）
-- `lib/client.js` — client 半边（侧边栏 UI）
+### 3. 构建插件
+
+```powershell
+cd D:\DeepSeek-Harness\plugins\dsh-mobile-sync\packages\dsh-mobile-sync-plugin
+pnpm install
+pnpm build
+```
+
+构建产物在 `lib/`：
+- `lib/index.js` — host 半边（路由 + 配对 + 事件中继 + ApiProxy 调用）
+- `lib/client.js` — client 半边（侧边栏 UI + 双向同步上报）
 - `lib/assets/relay.html` — 移动端页面
 
-### 加载插件
+### 4. 安装到 DSH profile
 
-```bash
-# 方式 A：link 模式（开发时热加载）
-dsh plugin --profile web add link:$(pwd)/packages/dsh-mobile-sync-plugin
-
-# 方式 B：打包后安装
-dsh plugin --profile web add dsh-mobile-sync
-
-# 启动 DSH Web（需 0.0.0.0 让手机可达）
-dsh web --host 0.0.0.0
+```powershell
+dsh plugin --profile web add file:D:\DeepSeek-Harness\plugins\dsh-mobile-sync\packages\dsh-mobile-sync-plugin
 ```
 
-### 手机配对
+验证：`dsh plugin --profile web list` 应列出 `dsh-mobile-sync`。
 
-1. 电脑端打开 DSH Web，侧边栏底部出现 **手机图标**
-2. 点击图标 → 弹出配对面板 → 显示 QR 码
-3. 手机扫码（或手动输入 URL）→ 自动配对 → 跳转到 `/m/` 移动端页面
-4. 配对成功后，手机获得 HttpOnly Cookie，后续 `/m/api/*` 请求自动鉴权
+### 5. 配置网络（让手机可达）
 
-### 插件配置
+> ⚠️ **重要**：DSH 官方**禁止** `dsh web --host 0.0.0.0`（安全设计，会报错）。不要用 netsh portproxy 转发（会引入 IP Helper 抢占端口的问题）。正确做法是**通过 profile 配置让 webServer 监听所有网卡**：
 
-通过 DSH 设置面板或 `cordis.patch.yml` 配置：
+编辑 `C:\Users\<你>\.dsh\profiles\web\cordis.patch.yml`，追加：
 
-| 选项 | 默认值 | 说明 |
-|---|---|---|
-| `mobileEnterToSend` | `true` | 手机端 Enter 键发送消息（false 时换行） |
-| `requirePairingForLan` | `true` | 非环回请求需配对 |
-| `publicBaseUrl` | 自动检测 | 公网 URL（如 `https://foo.trycloudflare.com`），用于 QR 码 |
-
-## 方式二：独立中继（零依赖）
-
-不依赖 DSH 插件系统，clone 即跑。适合快速测试或不支持插件的环境。
-
-```bash
-cd dsh-mobile-sync
-cp config.example.json config.json   # 设置 token
-node agent.mjs                        # 启动中继（端口 8788）
+```yaml
+# 让 dsh 监听所有网卡，手机/局域网可直接访问 3080
+- id: webserver
+  config:
+    host: 0.0.0.0
+    port: 3080
+# 手机扫码的 QR 地址用局域网 IP（换网络后需改）
+- id: mobile-sync
+  config:
+    publicBaseUrl: http://<你的电脑局域网IP>:3080
 ```
 
-手机访问 `http://<电脑IP>:8788/` → 输入 token → 连接。
+查局域网 IP：`ipconfig` → WLAN/以太网 的 IPv4 地址（如 `192.168.x.x`）。
 
-## 外网远程（不同 WiFi）
+### 6. 重启 dsh web 并配对
 
-手机和电脑不在同一 WiFi 时，需内网穿透把 DSH 端口暴露出去。
+1. 结束当前 dsh web 进程（`netstat -ano | findstr :3080` 查 PID → 任务管理器结束，或 `taskkill /F /PID <PID>`）
+2. 重新启动：`node "C:\Users\<你>\.dsh\profiles\node_modules\@deepseek-ai\dsh\lib\bin.js" web`
+3. 电脑浏览器打开 `http://127.0.0.1:3080` → 侧边栏底部 **📱 图标** → 配对面板显示 QR 码
+4. 手机连同一 WiFi → 扫码（或手动输 `http://<电脑IP>:3080/m/`）→ 自动配对 → 进入移动端
 
-### Tailscale（最推荐）
+### 7. 防火墙
 
-```bash
-# 电脑和手机各装 Tailscale，登录同一账号
-# 电脑启动：dsh web --host 0.0.0.0
-# 手机访问：http://<电脑Tailscale IP>:3080/m/
+若手机连不上，放行 3080（管理员 PowerShell）：
+
+```powershell
+netsh advfirewall firewall add rule name="dsh-mobile" dir=in action=allow protocol=TCP localport=3080
 ```
 
-### Cloudflare Tunnel
-
-```bash
-cloudflared tunnel --url http://127.0.0.1:3080
-# 打印: https://xxxx.trycloudflare.com
-# 在插件配置中设置 publicBaseUrl 为该 URL，QR 码自动使用
-```
-
-> Cloudflare QuickTunnel 不转发 SSE，前端会自动降级为轮询模式（每 1.5s），功能不受影响。
-
-### 自有反代（nginx/frp/caddy）
-
-```nginx
-location / {
-  proxy_pass http://127.0.0.1:3080;
-  proxy_http_version 1.1;
-  proxy_set_header Connection "";
-  proxy_buffering off;
-  proxy_read_timeout 3600s;
-}
-```
+---
 
 ## 功能清单
 
@@ -120,7 +104,7 @@ location / {
 | 多轮对话 | 发消息、Markdown 渲染、流式打字机回复 |
 | 双向实时同步 | PC ↔ 手机 UI 状态镜像：当前会话、模型、权限、最近操作两端实时可见、可互相跳转 |
 | 离线补同步 | 手机断线重连后自动补齐错过的会话事件（环形缓冲回放 + 历史回填） |
-| SSE 实时 | `events.mux` 事件流，打开会话即实时收事件 |
+| SSE 实时 | `events.mux` 事件流，打开会话即实时收事件（SSE 被阻断时自动降级 1.5s 轮询） |
 | 审批卡片 | 危险操作弹卡，允许/拒绝 |
 | 提问卡片 | `ask_user_question` 弹卡，选项/自定义回答 |
 | 工具卡片 | 每步操作一张卡：名称+状态+参数+结果 |
@@ -154,6 +138,51 @@ location / {
 | 黄色 | 轮询降级 | SSE 被阻断时，每 1.5s 轮询，功能完整 |
 | 灰色 | 未连接 | 未进入会话或连接已断开 |
 
+## 外网远程（不同 WiFi）
+
+### Tailscale（最推荐）
+
+```powershell
+# 电脑和手机各装 Tailscale，登录同一账号
+tailscale serve 3080   # 电脑上执行：通过 tailnet 代理到本机 3080
+# 手机访问：https://<电脑名>.<tailnet>.ts.net/m/
+# 把 publicBaseUrl 配置为该 HTTPS 地址，QR 码自动使用
+```
+
+### Cloudflare Tunnel
+
+```powershell
+cloudflared tunnel --url http://127.0.0.1:3080
+# 打印: https://xxxx.trycloudflare.com
+# 设置 publicBaseUrl 为该 URL
+```
+
+> Cloudflare QuickTunnel 不转发 SSE，前端会自动降级为轮询模式（每 1.5s），功能不受影响。
+
+### 自有反代（nginx/frp/caddy）
+
+```nginx
+location / {
+  proxy_pass http://127.0.0.1:3080;
+  proxy_http_version 1.1;
+  proxy_set_header Connection "";
+  proxy_buffering off;
+  proxy_read_timeout 3600s;
+}
+```
+
+## 独立中继（零依赖，可选）
+
+不依赖 DSH 插件系统，clone 即跑。适合快速测试或不支持插件的环境。
+
+```powershell
+cd dsh-mobile-sync
+Copy-Item config.example.json config.json   # 修改 token
+node agent.mjs                               # 启动中继（端口 8788）
+```
+
+手机访问 `http://<电脑IP>:8788/` → 输入 token → 连接。（此模式无 PC 端双向镜像，只有手机侧功能。）
+
 ## 插件 API 路由
 
 | 方法 | 路径 | 说明 |
@@ -165,21 +194,20 @@ location / {
 | GET | `/api/pair/status` | 配对状态 SSE（仅 loopback） |
 | GET | `/api/sync` | PC 端同步状态 SSE（仅 loopback） |
 | POST | `/api/sync/pc-state` | PC 端上报当前会话/模型/权限（仅 loopback） |
-| GET | `/m/` | 移动端页面 |
+| GET | `/m/` | 移动端页面（自动探测配对，无需手动登录） |
 | GET | `/m/pair?token=` | 配对中转页 |
 | GET | `/m/api/sync` | 手机端同步状态 SSE（推送 PC 状态 + 设备列表） |
 | GET | `/m/api/sync/state` | 手机端同步状态快照（轮询兜底） |
 | POST | `/m/api/sync/mobile-state` | 手机端上报当前会话/模型/权限/最近操作 |
 | GET | `/m/api/workspaces` | 工作区列表 |
-| GET | `/m/api/sessions` | 会话列表 |
-| POST | `/m/api/sessions` | 新建会话 |
+| GET/POST | `/m/api/sessions` | 会话列表 / 新建会话 |
 | GET | `/m/api/sessions/:id/history` | 对话历史 |
 | POST | `/m/api/sessions/:id/prompt` | 发消息 |
 | POST | `/m/api/sessions/:id/cancel` | 取消当前轮 |
 | GET/POST | `/m/api/sessions/:id/model` | 获取/切换模型 |
 | POST | `/m/api/sessions/:id/permission` | 切权限模式 |
 | GET | `/m/api/sessions/:id/events?afterSeq=` | 轮询事件增量 |
-| GET | `/m/api/sessions/:id/events.stream` | SSE 实时流 |
+| GET | `/m/api/sessions/:id/events.stream?afterSeq=` | SSE 实时流（连接时回放离线事件） |
 | GET | `/m/api/pending` | 待审批/提问列表 |
 | POST | `/m/api/approvals/:id` | 审批响应 |
 | POST | `/m/api/questions/:id` | 提问回答 |
@@ -188,12 +216,24 @@ location / {
 | GET | `/m/api/file?path=` | 读文件 |
 | POST | `/m/api/heartbeat` | 心跳保活 |
 
-`/m/api/*` 路由需配对 Cookie 鉴权；`/api/pair/*` 仅限 loopback。
+`/m/api/*` 路由需配对 Cookie 鉴权；`/api/pair/*` 与 `/api/sync*` 仅限 loopback。
+
+## 插件配置
+
+通过 `cordis.patch.yml` 的 `config` 段配置（profile 层）：
+
+```yaml
+- id: mobile-sync
+  config:
+    mobileEnterToSend: true      # 手机端 Enter 发送（false 则换行）
+    requirePairingForLan: true   # 非环回请求需配对
+    publicBaseUrl: http://192.168.x.x:3080   # QR 码地址（换网络记得改）
+```
 
 ## 安全说明
 
 - QR 码含一次性 token，5 分钟有效，接受后不可重用
-- 配对成功后设备获 HttpOnly Cookie，90 秒无心跳判离线
+- 配对成功后设备获 HttpOnly Cookie（7 天有效），90 秒无心跳判离线
 - 手机端 API 白名单：仅暴露会话/工作区/模型操作，不含 settings/credentials
 - 非环回请求需配对（可配置关闭）
 - 公网建议经 Tailscale 私有网络或 HTTPS 反代
@@ -205,36 +245,48 @@ dsh-mobile-sync/
 ├── packages/
 │   └── dsh-mobile-sync-plugin/        # Cordis 插件
 │       ├── src/
-│       │   ├── index.ts               # host 入口（路由 + 配对 + 事件中继）
+│       │   ├── index.ts               # host 入口（路由 + 配对 + 事件中继 + 同步桥装配）
 │       │   ├── config.ts              # 配置 schema
 │       │   ├── pairing.ts             # QR 配对服务
 │       │   ├── sync.ts                # 双向同步桥（PC ↔ 手机 UI 状态镜像）
-│       │   ├── dsh-client.ts          # DSH RPC 客户端 + 事件归一化
-│       │   ├── event-store.ts          # events.mux 中继 + 环形缓冲
+│       │   ├── dsh-client.ts          # DSH ApiProxy 结构化调用 + 事件/历史归一化
+│       │   ├── event-store.ts          # events.mux 中继 + 环形缓冲 + 待审批表
 │       │   ├── http-utils.ts          # HTTP/SSE 工具函数
 │       │   ├── routes.ts               # 全部路由（配对 + 同步 + 移动端 API + 静态页）
 │       │   └── client/                # 浏览器半边
 │       │       ├── index.ts           # 侧边栏 UI 注入 + PC 会话监听上报
 │       │       ├── bridge.ts          # client 半边与同步桥的通信层
 │       │       └── FooterRemoteEntry.tsx # 侧边栏手机图标 + 配对/同步面板
-│       ├── assets/
-│       │   └── relay.html             # 移动端单文件前端（含双向同步）
-│       ├── cordis.patch.yml           # 插件注册
-│       ├── tsconfig.json
-│       └── tsdown.config.ts
+│       ├── assets/relay.html          # 移动端单文件前端（含双向同步）
+│       ├── cordis.patch.yml           # 插件注册（dsh.bundle 声明）
+│       ├── package.json               # 含 dsh.bundle + dsh.client 声明
+│       └── tsconfig.json / tsdown.config.ts
 ├── agent.mjs                          # 独立中继（零依赖）
-├── src/
-│   ├── sync.mjs                       # 双向同步桥（零依赖版）
-│   └── ...                            # 其余同插件（server/event-store/dsh-client/config）
+├── src/                               # 独立中继源码（server/event-store/dsh-client/config/sync）
+├── web/relay.html                     # 独立中继用的移动端页面（与插件版同步）
 ├── config.example.json
 └── README.md
 ```
 
 ## 技术细节
 
-### 双向同步桥（SyncBridge）
+### ApiProxy 适配（DSH 0.1.0-rc.7）
 
-`src/sync.ts`（插件）/ `src/sync.mjs`（独立中继）维护两端 UI 状态并双向广播：
+插件通过 `ctx.apiProxy` 结构化命名空间调用 DSH 业务 API（**不是** `callRpc`）：
+
+```
+'session.list'      → apiProxy.sessions.list({rpcId, payload})
+'session.history'   → apiProxy.sessions.history({rpcId, payload})
+'session.prompt'    → apiProxy.sessions.prompt({rpcId, payload})
+'session.selectModel' → apiProxy.sessions.selectModel({rpcId, payload})  // 需 provider + model
+'workspace.list'    → apiProxy.workspace.list({rpcId, payload})
+```
+
+- 内部统一 `session.*` 单数命名，`fetchRpc` 自动映射到复数 `sessions` 命名空间
+- `selectModel` 自动从模型目录解析 model id 对应的 provider
+- 路由规范：`WebRoute.path` **不允许尾部斜杠**（`/m/api/sessions` 而非 `/m/api/sessions/`）
+
+### 双向同步桥（SyncBridge）
 
 ```
 PC client 半边 ──POST /api/sync/pc-state──▶ SyncBridge ──SSE /m/api/sync──▶ 手机
@@ -244,39 +296,43 @@ PC client 半边 ──POST /api/sync/pc-state──▶ SyncBridge ──SSE /m/
 - PC 半边由 client 入口订阅 `ctx.sessions.list`（ObservableSnapshot），当前会话变化即上报
 - 手机半边在切换会话 / 切模型 / 切权限 / 发消息时上报
 - 两端都可通过 SSE 实时收到对方状态；同步流每 25s 推一次完整快照（兼做设备在线状态刷新）
-- 手机端另有 `/m/api/sync/state` 轮询兜底，SSE 被阻断（如 QuickTunnel）时 30s 拉一次
+- 手机端另有 `/m/api/sync/state` 轮询兜底，SSE 被阻断时 30s 拉一次
 
 ### 离线补同步
 
 `events.stream` 接受 `afterSeq` 参数：连接建立时先回放缓冲中该水位之后的事件（环形缓冲每会话 200 条），缺口自动回填 `session.history`（5s 冷却防抖）。手机端重连时用最新 `lastSeq` 重建 EventSource（带退避），SSE 连续失败 3 次自动降级轮询，轮询本身即增量拉取，两种模式都不丢事件。
 
-### 事件中继
+### 移动端双模式
 
-插件通过 WebSocket 连接 DSH 的 `events.mux`，接收所有会话事件，归一化为 `StreamItem` 后通过 SSE 推送给手机。支持：
-- 实时流（SSE）：首选，低延迟
-- 轮询降级：SSE 被阻断时自动切换
-- 环形缓冲：每会话最多 200 条，自动淘汰
-- 审批/提问表：`approval/requested` 和 `question/requested` 分通道处理
-
-### RPC 代理
-
-手机端通过 `/m/api/rpc` 或专用路由调用 DSH 的 `ApiProxy.callRpc()`，白名单限制可调方法：
-- `workspace.list`、`session.list`、`session.create`
-- `session.history`、`session.prompt`、`session.cancel`
-- `session.models`、`session.selectModel`
+`relay.html` 同时服务两种部署：
+- **独立中继**：登录页填服务器地址 + token（Bearer/query 鉴权）
+- **插件模式**：页面自动探测 `/m/api/workspaces`（同源 Cookie），配对后直接进入，无需登录；API 路径自动补 `/m` 前缀（`/api/x` → `/m/api/x`）
 
 ## 故障排查
 
 | 现象 | 原因 / 解决 |
 |---|---|
 | 侧边栏无手机图标 | 确认插件已加载：`dsh plugin --profile web list` |
-| QR 码地址是 127.0.0.1 | DSH 未绑定 0.0.0.0；用 `dsh web --host 0.0.0.0` 或设 `publicBaseUrl` |
+| 启动报 `declares no dsh.bundle` | 插件 package.json 缺 `dsh.bundle.patch` 声明；重新 `dsh plugin add` 后重启 |
+| 启动报 `EADDRINUSE` | 旧 dsh web 未杀干净：`netstat -ano \| findstr :3080` 查 PID → `taskkill /F /PID <PID>` → 等 2 秒再启动 |
+| `--host 0.0.0.0` 报错被拒 | DSH 安全禁止 CLI 绑定；改用 profile 配置 `webserver.config.host: 0.0.0.0`（见上文） |
+| 手机连不上 3080 | 防火墙放行：`netsh advfirewall firewall add rule name="dsh-mobile" dir=in action=allow protocol=TCP localport=3080` |
+| QR 码地址是 127.0.0.1 | 配置 `mobile-sync.config.publicBaseUrl: http://<局域网IP>:3080`（换网络记得改） |
+| 手机显示「非 JSON 响应」 | 插件未重启 / 路由未匹配：确认 `/m/api/workspaces` 返回 JSON；检查是否走了独立中继路径 |
 | 手机扫码后配对失败 | token 已过期（5 分钟）；刷新 QR 码 |
 | 流式不实时 | Cloudflare QuickTunnel 不转发 SSE——换 Tailscale 或持久隧道 |
 | Agent 提问无响应 | 确认手机打开了会话页（SSE 在线） |
 | 工具结果为空 | DSH 版本字段差异；检查 `tool/result` 双层嵌套 |
-| 手机看不到「电脑正在查看」提示条 | PC 端 DSH 主界面当前没有打开任何会话；或插件 client 半边未加载（`dsh plugin --profile web list` 确认） |
+| 手机看不到「电脑正在查看」提示条 | PC 端 DSH 主界面当前没有打开任何会话；或插件 client 半边未加载 |
 | 手机离线期间的消息没补上 | 断线超过环形缓冲上限（200 条）后需回填 history；确认手机端网络恢复后 EventSource 已重连（顶栏圆点为绿色） |
+
+## 开发
+
+```powershell
+cd packages/dsh-mobile-sync-plugin
+pnpm dev        # tsc --watch 类型检查
+pnpm build      # tsc 检查 + tsdown 打包 + client 包装
+```
 
 ## License
 
