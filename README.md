@@ -72,13 +72,13 @@ dsh plugin --profile web add file:D:\DeepSeek-Harness\plugins\dsh-mobile-sync\pa
   config:
     host: 0.0.0.0
     port: 3080
-# 手机扫码的 QR 地址用局域网 IP（换网络后需改）
+# mobile-sync 无需配置 publicBaseUrl：插件启动时自动检测当前局域网 IP 生成 QR 码
+# （自动过滤 VMware/VirtualBox 等虚拟网卡，优先 WLAN/以太网；换网络无需手动改）
 - id: mobile-sync
-  config:
-    publicBaseUrl: http://<你的电脑局域网IP>:3080
+  config: {}
 ```
 
-查局域网 IP：`ipconfig` → WLAN/以太网 的 IPv4 地址（如 `192.168.x.x`）。
+插件会自动检测当前局域网 IP 用于 QR 码，**换网络后重启 dsh web 即可，无需改配置**。（如需外网 URL——如隧道域名——再配置 `publicBaseUrl`，优先级高于自动检测。）
 
 ### 6. 重启 dsh web 并配对
 
@@ -153,7 +153,10 @@ netsh advfirewall firewall add rule name="dsh-mobile" dir=in action=allow protoc
 # 电脑和手机各装 Tailscale，登录同一账号
 tailscale serve 3080   # 电脑上执行：通过 tailnet 代理到本机 3080
 # 手机访问：https://<电脑名>.<tailnet>.ts.net/m/
-# 把 publicBaseUrl 配置为该 HTTPS 地址，QR 码自动使用
+# 把 publicBaseUrl 配置为该 HTTPS 地址（配置后优先于自动检测的局域网 IP），QR 码自动使用
+- id: mobile-sync
+  config:
+    publicBaseUrl: https://<电脑名>.<tailnet>.ts.net
 ```
 
 ### Cloudflare Tunnel
@@ -234,7 +237,8 @@ node agent.mjs                               # 启动中继（端口 8788）
   config:
     mobileEnterToSend: true      # 手机端 Enter 发送（false 则换行）
     requirePairingForLan: true   # 非环回请求需配对
-    publicBaseUrl: http://192.168.x.x:3080   # QR 码地址（换网络记得改）
+    # publicBaseUrl 可选：默认自动检测当前局域网 IP 生成 QR；仅外网（隧道/反代）时配置
+    # publicBaseUrl: https://xxx.trycloudflare.com
 ```
 
 ## 测试状态说明
@@ -344,7 +348,8 @@ PC client 半边 ──POST /api/sync/pc-state──▶ SyncBridge ──SSE /m/
 | 启动报 `EADDRINUSE` | 旧 dsh web 未杀干净：`netstat -ano \| findstr :3080` 查 PID → `taskkill /F /PID <PID>` → 等 2 秒再启动 |
 | `--host 0.0.0.0` 报错被拒 | DSH 安全禁止 CLI 绑定；改用 profile 配置 `webserver.config.host: 0.0.0.0`（见上文） |
 | 手机连不上 3080 | 防火墙放行：`netsh advfirewall firewall add rule name="dsh-mobile" dir=in action=allow protocol=TCP localport=3080` |
-| QR 码地址是 127.0.0.1 | 配置 `mobile-sync.config.publicBaseUrl: http://<局域网IP>:3080`（换网络记得改） |
+| QR 码地址是 127.0.0.1 | 插件未自动检测到局域网 IP（无物理网卡）或 dsh 未监听 0.0.0.0；确认 `webserver.config.host: 0.0.0.0` 已配置并重启 |
+| 换网络后手机连不上 | IP 已变化属正常：重启 dsh web 后重新扫码（QR 码自动使用新 IP，无需改配置） |
 | 手机显示「非 JSON 响应」 | 插件未重启 / 路由未匹配：确认 `/m/api/workspaces` 返回 JSON；检查是否走了独立中继路径 |
 | 手机扫码后配对失败 | token 已过期（5 分钟）；刷新 QR 码 |
 | 流式不实时 | Cloudflare QuickTunnel 不转发 SSE——换 Tailscale 或持久隧道 |
