@@ -17,18 +17,26 @@ export const inject = ['webServer', 'apiProxy'];
 
 export type { MobileSyncConfig } from './config.js';
 
-/** 检测本机 LAN IP 地址（用于生成手机可访问的 QR 码） */
+/** 检测本机 LAN IP（用于生成手机可访问的 QR 码）：跳过虚拟网卡，优先物理网卡 */
 function detectLanIp(): string | null {
   const ifs = os.networkInterfaces();
-  for (const list of Object.values(ifs)) {
+  const candidates: { name: string; address: string }[] = [];
+  for (const [name, list] of Object.entries(ifs)) {
     if (!list) continue;
     for (const iface of list) {
-      if (iface.family === 'IPv4' && !iface.internal && !iface.address.startsWith('169.254')) {
-        return iface.address;
-      }
+      if (iface.family !== 'IPv4' || iface.internal) continue;
+      const a = iface.address;
+      if (a.startsWith('169.254')) continue; // 链路本地地址跳过
+      candidates.push({ name, address: a });
     }
   }
-  return null;
+  // 虚拟网卡（VMware/VirtualBox/Hyper-V/Docker/WSL 等）手机不可达，过滤掉
+  const isVirtual = (n: string) => /vmware|virtualbox|hyper-v|vethernet|loopback|docker|wsl|vmnet/i.test(n);
+  const pool = candidates.filter((c) => !isVirtual(c.name));
+  const usable = pool.length ? pool : candidates;
+  // 优先 WLAN / 以太网等物理上网卡
+  const preferred = usable.find((c) => /wlan|wi-?fi|ethernet|以太网|无线/i.test(c.name)) || usable[0];
+  return preferred ? preferred.address : null;
 }
 
 export function apply(ctx: Context, config: MobileSyncConfig = {}): void {

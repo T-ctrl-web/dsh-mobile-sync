@@ -1388,14 +1388,27 @@ const DEFAULT_CONFIG = {
 //#region src/index.ts
 const name = "dsh-mobile-sync";
 const inject = ["webServer", "apiProxy"];
-/** 检测本机 LAN IP 地址（用于生成手机可访问的 QR 码） */
+/** 检测本机 LAN IP（用于生成手机可访问的 QR 码）：跳过虚拟网卡，优先物理网卡 */
 function detectLanIp() {
 	const ifs = os.networkInterfaces();
-	for (const list of Object.values(ifs)) {
+	const candidates = [];
+	for (const [name, list] of Object.entries(ifs)) {
 		if (!list) continue;
-		for (const iface of list) if (iface.family === "IPv4" && !iface.internal && !iface.address.startsWith("169.254")) return iface.address;
+		for (const iface of list) {
+			if (iface.family !== "IPv4" || iface.internal) continue;
+			const a = iface.address;
+			if (a.startsWith("169.254")) continue;
+			candidates.push({
+				name,
+				address: a
+			});
+		}
 	}
-	return null;
+	const isVirtual = (n) => /vmware|virtualbox|hyper-v|vethernet|loopback|docker|wsl|vmnet/i.test(n);
+	const pool = candidates.filter((c) => !isVirtual(c.name));
+	const usable = pool.length ? pool : candidates;
+	const preferred = usable.find((c) => /wlan|wi-?fi|ethernet|以太网|无线/i.test(c.name)) || usable[0];
+	return preferred ? preferred.address : null;
 }
 function apply(ctx, config = {}) {
 	const cfg = {
