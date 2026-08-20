@@ -8,113 +8,164 @@
 <title>DSH 手机远程</title>
 <style>
 :root[data-theme="dark"]{
-  --bg:#191919; --bg2:#232323; --bg3:#2b2b2b; --border:#333; --text:#ececec; --muted:#9a9a9a;
-  --accent:#4a90d9; --accent2:#6b5ce7; --ok:#4caf50; --warn:#f0a020; --err:#e0533d;
-  --bubble-user:#2a3a2a; --bubble-bot:#232323;
+  --bg:#0e1116; --bg2:#151a23; --bg3:#1d2431; --surface:#1a2029;
+  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.14);
+  --text:#e8ecf3; --muted:#8b93a7;
+  --accent:#5b8cff; --accent2:#8a6cff; --accent-soft:rgba(91,140,255,.14);
+  --ok:#34c77b; --ok-soft:rgba(52,199,123,.14);
+  --warn:#f5a623; --warn-soft:rgba(245,166,35,.14);
+  --err:#ff5f6d; --err-soft:rgba(255,95,109,.14);
+  --bubble-user:linear-gradient(135deg,#4d7cff,#7a5cff);
+  --bubble-bot:#1c2230;
+  --shadow:0 10px 34px rgba(0,0,0,.4);
+  --ring:rgba(91,140,255,.35);
 }
 :root[data-theme="light"]{
-  --bg:#fafafa; --bg2:#fff; --bg3:#eee; --border:#ddd; --text:#222; --muted:#777;
-  --accent:#2a6fb0; --accent2:#5b4cd7; --ok:#2e8b3d; --warn:#c08010; --err:#c0392b;
-  --bubble-user:#e3f2e3; --bubble-bot:#fff;
+  --bg:#f4f6fb; --bg2:#fff; --bg3:#eef1f7; --surface:#fff;
+  --border:rgba(15,23,42,.08); --border2:rgba(15,23,42,.14);
+  --text:#1a1d26; --muted:#6b7280;
+  --accent:#3b6fe0; --accent2:#6d4fe0; --accent-soft:rgba(59,111,224,.1);
+  --ok:#16a34a; --ok-soft:rgba(22,163,74,.1);
+  --warn:#d97706; --warn-soft:rgba(217,119,6,.1);
+  --err:#dc2626; --err-soft:rgba(220,38,38,.1);
+  --bubble-user:linear-gradient(135deg,#3b6fe0,#6d4fe0);
+  --bubble-bot:#fff;
+  --shadow:0 10px 26px rgba(20,30,60,.1);
+  --ring:rgba(59,111,224,.3);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.55 -apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC",sans-serif;overflow:hidden}
-button{font:inherit;color:var(--text);background:none;border:none;cursor:pointer;padding:0}
-input,textarea{font:inherit;color:inherit;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;width:100%}
+body{background:radial-gradient(1100px 520px at 85% -8%, var(--accent-soft), transparent 62%), var(--bg)}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+input,textarea{font:inherit;color:inherit;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:11px 14px;width:100%;outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3.5px var(--ring)}
 a{color:var(--accent)}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 
 /* app shell */
-#app{display:flex;flex-direction:column;height:100dvh;max-width:560px;margin:0 auto;position:relative}
-.topbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--border);min-height:48px;position:sticky;top:0;z-index:5}
-.topbar .back{font-size:22px;line-height:1;padding:4px}
-.topbar h1{font-size:15px;font-weight:600;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.tabbar{display:flex;background:var(--bg2);border-top:1px solid var(--border)}
-.tabbar button{flex:1;padding:8px 0 10px;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px}
-.tabbar button.on{color:var(--accent)}
-.tabbar .ico{font-size:18px;line-height:1}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:560px;margin:0 auto;position:relative;background:var(--bg)}
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 14px;min-height:54px;position:sticky;top:0;z-index:5;background:var(--bg2);background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);border-bottom:1px solid var(--border)}
+.topbar .back{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;color:var(--text);transition:background .12s}
+.topbar .back:active{background:var(--bg3)}
+.topbar .back svg{width:20px;height:20px}
+.topbar h1{font-size:16px;font-weight:700;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.2px}
+.topbar .tbtn{font-size:13px;font-weight:600;color:var(--accent);padding:7px 12px;border-radius:10px;background:var(--accent-soft);transition:transform .1s}
+.topbar .tbtn:active{transform:scale(.95)}
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.content::-webkit-scrollbar{display:none}
+.tabbar{display:flex;background:var(--bg2);background:color-mix(in srgb,var(--bg2) 90%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);padding:4px 8px calc(6px + env(safe-area-inset-bottom))}
+.tabbar button{flex:1;padding:7px 0 8px;font-size:10.5px;font-weight:500;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:12px;transition:color .15s,background .15s}
+.tabbar button.on{color:var(--accent);background:var(--accent-soft)}
+.tabbar .ico{display:flex;line-height:1}
+.tabbar .ico svg{display:block}
 
 /* login */
-#login{display:flex;flex-direction:column;gap:14px;justify-content:center;height:100%;padding:24px}
-#login .logo{font-size:34px;font-weight:700;text-align:center;margin-bottom:4px}
-#login .sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:8px}
-#login label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
-.btn{background:var(--accent);color:#fff;border-radius:8px;padding:10px;font-weight:600;text-align:center}
-.btn.sec{background:var(--bg3);color:var(--text)}
-.btn.ghost{background:transparent;border:1px solid var(--border)}
+#login{display:flex;flex-direction:column;gap:14px;justify-content:center;height:100%;padding:28px;max-width:420px;margin:0 auto;width:100%}
+#login .logo{font-size:40px;font-weight:800;text-align:center;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:2px;letter-spacing:1px}
+#login .sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:12px}
+#login .field{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+#login label{font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px}
+#login input{margin-bottom:10px}
+#login input:last-of-type{margin-bottom:0}
+.btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:14px;padding:12px;font-weight:700;text-align:center;letter-spacing:.5px;box-shadow:0 6px 18px var(--ring);transition:transform .12s,box-shadow .12s}
+.btn:active{transform:scale(.97);box-shadow:0 3px 10px var(--ring)}
+.btn.sec{background:var(--bg3);color:var(--text);box-shadow:none}
+.btn.ghost{background:transparent;border:1px solid var(--border);box-shadow:none;color:var(--text)}
 
 /* lists */
-.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg2)}
-.row .ttl{font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .meta{font-size:11px;color:var(--muted)}
-.row .arrow{color:var(--muted)}
-.badge{font-size:10px;padding:2px 6px;border-radius:8px;background:var(--bg3);color:var(--muted)}
-.badge.run{background:var(--ok);color:#fff}
-.badge.pend{background:var(--warn);color:#fff}
+.row{display:flex;align-items:center;gap:12px;padding:14px 16px;margin:0 12px 10px;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:transform .12s,background .12s}
+.row:active{transform:scale(.98);background:var(--bg3)}
+.row .ttl{font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14.5px}
+.row .meta{font-size:11px;color:var(--muted);margin-top:1px}
+.row .arrow{color:var(--muted);font-size:18px}
+.badge{font-size:10px;padding:2.5px 8px;border-radius:999px;background:var(--bg3);color:var(--muted);font-weight:600}
+.badge.run{background:var(--ok-soft);color:var(--ok)}
+.badge.pend{background:var(--warn-soft);color:var(--warn)}
+.grp{font-size:11px;font-weight:700;color:var(--muted);padding:14px 20px 6px;text-transform:uppercase;letter-spacing:1px}
 
 /* chat */
-.chat{padding:10px 12px 16px}
-.msg{margin-bottom:12px}
-.msg .role{font-size:11px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
-.bubble{background:var(--bubble-bot);border:1px solid var(--border);border-radius:10px;padding:10px 12px;white-space:pre-wrap;word-break:break-word}
-.bubble.user{background:var(--bubble-user)}
-.bubble pre{background:#0d0d0d;color:#ddd;border-radius:8px;padding:10px;overflow-x:auto;margin:6px 0;font-size:12px}
-.bubble code{font-family:ui-monospace,monospace;font-size:13px}
-.bubble p{margin:0 0 6px}.bubble p:last-child{margin:0}
-.bubble strong{font-weight:600}
-.bubble ul,.bubble ol{margin:4px 0;padding-left:20px}
-.think{font-size:13px;color:var(--muted);border-left:3px solid var(--border);padding:4px 10px;margin:6px 0}
-.toolcard{border:1px solid var(--border);border-radius:10px;margin:8px 0;overflow:hidden}
-.toolcard .tc-head{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg3)}
-.toolcard .tc-name{font-family:monospace;font-size:13px;font-weight:600}
-.toolcard .tc-st{font-size:11px;color:var(--muted);margin-left:auto}
+.chat{padding:12px 12px 18px}
+.msg{margin-bottom:14px;animation:msgIn .22s ease-out}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.msg .role{font-size:10.5px;color:var(--muted);margin:0 4px 4px;font-weight:600;letter-spacing:.6px;text-transform:uppercase}
+.bubble{background:var(--bubble-bot);border:1px solid var(--border);border-radius:16px;border-top-left-radius:5px;padding:11px 14px;white-space:pre-wrap;word-break:break-word;max-width:92%;font-size:14.5px;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.msg .bubble{margin-right:auto}
+.bubble.user{background:var(--bubble-user);color:#fff;border:none;border-radius:16px;border-top-right-radius:5px;margin-left:auto;max-width:82%}
+.bubble pre{background:#0a0e14;color:#c8d3e8;border-radius:12px;padding:12px;overflow-x:auto;margin:8px 0;font-size:12.5px;line-height:1.5}
+.bubble code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:rgba(127,127,127,.14);padding:1.5px 5px;border-radius:5px}
+.bubble.user code{background:rgba(255,255,255,.18)}
+.bubble p{margin:0 0 8px}.bubble p:last-child{margin:0}
+.bubble strong{font-weight:700}
+.bubble ul,.bubble ol{margin:6px 0;padding-left:22px}
+.bubble a{color:var(--accent)}.bubble.user a{color:#fff;text-decoration:underline}
+.think{font-size:12.5px;color:var(--muted);border-left:3px solid var(--accent2);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:7px 12px;margin:8px 0}
+.toolcard{border:1px solid var(--border);border-radius:14px;margin:10px 0;overflow:hidden;background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.06);animation:msgIn .22s ease-out}
+.toolcard .tc-head{display:flex;align-items:center;gap:9px;padding:10px 12px;background:var(--bg3)}
+.toolcard .tc-name{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toolcard .tc-st{font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;flex-shrink:0}
 .toolcard .tc-st.done{color:var(--ok)}.toolcard .tc-st.fail{color:var(--err)}
-.toolcard .tc-body{padding:8px 10px;font-size:12px;font-family:monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted);border-top:1px solid var(--border)}
-.stream-cur{display:inline-block;width:7px;height:15px;background:var(--accent);vertical-align:-2px;animation:bl 1s steps(2) infinite}
+.toolcard .tc-body{padding:10px 12px;font-size:12px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted);border-top:1px solid var(--border);background:rgba(0,0,0,.16)}
+.stream-cur{display:inline-block;width:7px;height:14px;background:var(--accent);border-radius:2px;vertical-align:-2px;animation:bl 1s steps(2) infinite}
 @keyframes bl{50%{opacity:0}}
 
 /* approval/question cards */
-.pending{border:1px solid var(--warn);border-radius:10px;margin:8px 0;background:var(--bg2);padding:10px 12px}
-.pending .pt{font-size:13px;font-weight:600;color:var(--warn);margin-bottom:6px}
-.pending .pr{font-size:13px;color:var(--muted);margin-bottom:8px;white-space:pre-wrap;word-break:break-word}
-.pending .acts{display:flex;gap:8px}
-.pending .acts button{flex:1;padding:8px;border-radius:8px;font-weight:600;font-size:13px}
-.pending .allow{background:var(--ok);color:#fff}.pending .deny{background:var(--err);color:#fff}
-.qopt{display:block;padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px}
+.pending{border:1px solid var(--warn);border-radius:16px;margin:12px 0;background:linear-gradient(180deg,var(--warn-soft),transparent 55%),var(--surface);padding:14px;box-shadow:var(--shadow);animation:msgIn .25s ease-out}
+.pending .pt{font-size:13px;font-weight:800;color:var(--warn);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.pending .pr{font-size:13.5px;color:var(--text);margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
+.pending .pr b{color:var(--warn)}
+.pending .acts{display:flex;gap:10px}
+.pending .acts button{flex:1;padding:11px;border-radius:12px;font-weight:700;font-size:13.5px;letter-spacing:1px;transition:transform .1s}
+.pending .acts button:active{transform:scale(.96)}
+.pending .allow{background:var(--ok);color:#fff;box-shadow:0 4px 12px var(--ok-soft)}
+.pending .deny{background:var(--err);color:#fff;box-shadow:0 4px 12px var(--err-soft)}
+.qopt{display:block;width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:12px;margin-bottom:8px;font-size:13.5px;background:var(--bg2);text-align:left;transition:border-color .12s,background .12s}
+.qopt:active{border-color:var(--accent);background:var(--accent-soft)}
 
 /* composer */
-.composer{display:flex;gap:8px;padding:8px 12px;background:var(--bg2);border-top:1px solid var(--border);align-items:flex-end}
-.composer textarea{resize:none;max-height:120px;min-height:40px}
-.composer .send{background:var(--accent);color:#fff;border-radius:8px;width:40px;height:40px;font-size:18px;flex-shrink:0}
-.chips{display:flex;gap:6px;padding:4px 12px 6px;background:var(--bg2);border-top:1px solid var(--border);flex-wrap:wrap}
-.chip{font-size:11px;padding:4px 8px;border-radius:8px;background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
-.chip.act{color:var(--accent);border-color:var(--accent)}
+.composer{display:flex;gap:9px;padding:9px 12px calc(9px + env(safe-area-inset-bottom));background:var(--bg2);background:color-mix(in srgb,var(--bg2) 88%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);align-items:flex-end}
+.composer textarea{resize:none;max-height:130px;min-height:42px;font-size:15px;line-height:1.45;padding:11px 16px;border-radius:21px;flex:1}
+.composer .send{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px var(--ring);transition:transform .12s}
+.composer .send:active{transform:scale(.9)}
+.composer .send svg{width:19px;height:19px}
+.chips{display:flex;gap:8px;padding:6px 12px 4px;flex-wrap:wrap}
+.chip{font-size:12px;font-weight:500;padding:7px 14px;border-radius:999px;background:var(--bg3);color:var(--muted);border:1px solid var(--border);display:inline-flex;align-items:center;gap:5px;transition:all .12s}
+.chip:active{transform:scale(.95)}
+.chip.act{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 
 /* sheet (model picker) */
-.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:var(--bg2);width:100%;max-width:560px;border-radius:14px 14px 0 0;max-height:70vh;overflow-y:auto;padding:8px 0 20px}
-.sheet h3{padding:12px 16px;margin:0;border-bottom:1px solid var(--border)}
-.sheet .grp{font-size:11px;color:var(--muted);padding:8px 16px 4px;text-transform:uppercase;letter-spacing:.5px}
-.sheet .opt{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
-.sheet .opt.cur{color:var(--accent)}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .18s ease-out}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.sheet{background:var(--bg2);width:100%;max-width:560px;border-radius:22px 22px 0 0;max-height:74vh;overflow-y:auto;padding:6px 0 calc(20px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.35);animation:sheetUp .24s cubic-bezier(.2,.9,.3,1)}
+@keyframes sheetUp{from{transform:translateY(60px);opacity:.4}to{transform:none;opacity:1}}
+.sheet::before{content:'';display:block;width:36px;height:4px;border-radius:99px;background:var(--border2);margin:8px auto 4px}
+.sheet h3{padding:10px 18px 12px;margin:0;font-size:15px;font-weight:700}
+.sheet .grp{font-size:11px;font-weight:700;color:var(--muted);padding:10px 18px 4px;text-transform:uppercase;letter-spacing:1px}
+.sheet .opt{padding:12px 18px;display:flex;align-items:center;gap:10px;transition:background .1s}
+.sheet .opt:active{background:var(--bg3)}
+.sheet .opt.cur{color:var(--accent);background:var(--accent-soft)}
+.sheet .opt.cur .nm{font-weight:700}
 .sheet .opt .nm{font-weight:500;flex:1}
-.sheet .opt .id{font-size:11px;color:var(--muted);font-family:monospace}
+.sheet .opt .id{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
+.sheet .opt.cur::after{content:'✓';margin-left:auto;font-weight:700}
 
 /* terminal/files views */
-.term-out{font-family:monospace;font-size:12px;white-space:pre-wrap;word-break:break-word;padding:10px 12px;background:#000;color:#cfcfcf;min-height:120px}
-.file-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}
-.file-item .ic{font-size:16px}.file-item .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.code-view{font-family:monospace;font-size:12px;white-space:pre;padding:10px 12px;overflow-x:auto}
-.empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px}
-.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-right:4px}
-.conn-dot.sse{background:var(--ok);box-shadow:0 0 4px var(--ok)}
-.conn-dot.poll{background:var(--warn)}
+.term-out{font-family:ui-monospace,monospace;font-size:12.5px;white-space:pre-wrap;word-break:break-word;padding:14px;background:#0a0e14;color:#c8d3e8;min-height:140px;border-radius:14px;margin:12px;border:1px solid var(--border);line-height:1.55}
+.file-item{display:flex;align-items:center;gap:12px;padding:13px 16px;margin:0 12px 8px;background:var(--surface);border:1px solid var(--border);border-radius:13px;transition:transform .1s,background .1s}
+.file-item:active{transform:scale(.98);background:var(--bg3)}
+.file-item .ic{font-size:18px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:9px;flex-shrink:0}
+.file-item .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;font-weight:500}
+.code-view{font-family:ui-monospace,monospace;font-size:12.5px;white-space:pre;padding:14px;overflow-x:auto;background:#0a0e14;color:#c8d3e8;margin:12px;border-radius:14px;border:1px solid var(--border);line-height:1.55}
+.empty{padding:60px 24px;text-align:center;color:var(--muted);font-size:13.5px}
+.empty::before{content:'📭';display:block;font-size:38px;margin-bottom:10px;opacity:.7}
+.conn-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0;transition:all .2s}
+.conn-dot.sse{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.conn-dot.poll{background:var(--warn);box-shadow:0 0 8px var(--warn)}
 .conn-dot.off{background:var(--muted)}
 /* PC 端同步提示条（双向同步） */
-.pcbar{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);cursor:pointer;flex-shrink:0}
-.pcbar b{color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pcbar .go{margin-left:auto;color:var(--accent);flex-shrink:0}
+.pcbar{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--accent-soft);border-bottom:1px solid var(--border);font-size:12.5px;color:var(--muted);cursor:pointer;flex-shrink:0;transition:background .12s}
+.pcbar:active{background:color-mix(in srgb,var(--accent-soft) 70%,transparent)}
+.pcbar b{color:var(--accent);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcbar .go{margin-left:auto;color:var(--accent);font-weight:600;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -276,17 +327,15 @@ function render(){
 function viewLogin(){
   app.innerHTML = `
   <div id="login">
-    <div class="logo" style="color:var(--accent)">DSH</div>
+    <div class="logo">DSH</div>
     <div class="sub">手机远程控制你的电脑 Agent</div>
-    <div>
+    <div class="field">
       <label>服务器地址</label>
       <input id="inBase" placeholder="http://192.168.x.x:8788 或留空（插件模式）" value="${esc(state.base)}">
-    </div>
-    <div>
       <label>访问令牌 Token</label>
       <input id="inToken" placeholder="独立中继模式需要；插件模式留空" value="${esc(state.token)}">
     </div>
-    <button class="btn" id="btnConn">连接</button>
+    <button class="btn" id="btnConn">连 接</button>
     <div class="sub" id="loginHint">检测中…</div>
   </div>`;
   // 自动探测：插件模式（同源 + 已配对 Cookie）→ 直接进入移动端
@@ -330,7 +379,7 @@ async function probePluginMode(){
 
 // ---- 会话/工作区列表 ----
 async function viewSessions(){
-  app.innerHTML=`<div class="topbar"><h1>会话</h1><button class="btn sec" id="newS" style="padding:6px 10px;font-size:12px">+ 新建</button></div>${pcBarHtml()}<div class="content" id="lst"><div class="empty">加载中…</div></div>`;
+  app.innerHTML=`<div class="topbar"><h1>会话</h1><button class="tbtn" id="newS">＋ 新建</button></div>${pcBarHtml()}<div class="content" id="lst"><div class="empty">加载中…</div></div>`;
   bindPcBar();
   document.getElementById('newS').onclick=async()=>{
     try{ const r=await api('/api/sessions',{method:'POST',body:JSON.stringify({cwd:state.workspace||''})});
@@ -344,11 +393,11 @@ async function viewSessions(){
     const {items:ss}=await api('/api/sessions');
     let html='';
     if(ws.length){
-      html+=ws.map(w=>`<div class="row" data-ws="${w.workspaceId}"><span class="badge">${w.sessionCount}</span><div class="ttl">${esc(w.title||w.path)}</div><div class="meta mono">${esc(w.path)}</div></div>`).join('');
+      html+=ws.map(w=>`<div class="row" data-ws="${w.workspaceId}"><span class="badge">${w.sessionCount}</span><div class="ttl">${esc(w.title||w.path)}</div><div class="meta mono">${esc(w.path)}</div><span class="arrow">›</span></div>`).join('');
     }
     if(ss.length){
-      html+=`<div class="grp" style="padding:10px 14px;font-size:11px;color:var(--muted);text-transform:uppercase">所有会话</div>`;
-      html+=ss.map(s=>`<div class="row" data-sid="${s.sessionId}"><div class="ttl">${esc(s.title||'(未命名)')}${s.running?'<span class="badge run" style="margin-left:6px">运行中</span>':''}</div><div class="meta">${esc((s.cwd||'').split(/[\\/]/).pop())}</div></div>`).join('');
+      html+=`<div class="grp">所有会话</div>`;
+      html+=ss.map(s=>`<div class="row" data-sid="${s.sessionId}"><div class="ttl">${esc(s.title||'(未命名)')}${s.running?'<span class="badge run" style="margin-left:7px">运行中</span>':''}</div><div class="meta">${esc((s.cwd||'').split(/[\\/]/).pop())}</div><span class="arrow">›</span></div>`).join('');
     }
     lst.innerHTML=html||'<div class="empty">暂无会话，点 + 新建</div>';
     lst.querySelectorAll('[data-sid]').forEach(el=>el.onclick=async()=>{
@@ -373,21 +422,21 @@ async function loadHistory(){
 function viewChat(){
   app.innerHTML=`
   <div class="topbar">
-    <button class="back" id="bk">‹</button>
+    <button class="back" id="bk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <span class="conn-dot sse" id="connDot" title="实时 SSE"></span>
     <h1>${esc(state.session?.title||'对话')}</h1>
-    <button id="mdl" style="font-size:12px;color:var(--accent)">模型</button>
+    <button class="tbtn" id="mdl">模型</button>
   </div>
   ${pcBarHtml()}
   <div class="content chat" id="chat"></div>
   <div class="chips">
-    <span class="chip" id="permChip">权限</span>
-    <span class="chip" id="modelChip">${state.model?esc(state.model):'默认模型'}</span>
-    <span class="chip" id="filesChip">文件</span>
+    <span class="chip" id="permChip">🔐 权限</span>
+    <span class="chip" id="modelChip">🧠 ${state.model?esc(state.model):'默认模型'}</span>
+    <span class="chip" id="filesChip">📁 文件</span>
   </div>
   <div class="composer">
     <textarea id="ta" placeholder="输入指令，Enter 发送" rows="1"></textarea>
-    <button class="send" id="snd">↑</button>
+    <button class="send" id="snd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
   </div>`;
   bindPcBar();
   document.getElementById('bk').onclick=()=>{stopStream();state.session=null;render();reportActiveSession()};
@@ -656,7 +705,7 @@ function openPermSheet(){
 
 // ---- 文件浏览视图 ----
 async function viewFiles(dir){
-  app.innerHTML=`<div class="topbar"><button class="back" id="bk">‹</button><h1>文件</h1></div><div class="content" id="fl"><div class="empty">加载中…</div></div>`;
+  app.innerHTML=`<div class="topbar"><button class="back" id="bk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h1>文件</h1></div><div class="content" id="fl"><div class="empty">加载中…</div></div>`;
   document.getElementById('bk').onclick=()=>{state.view='chat';render()};
   const fl=document.getElementById('fl');
   try{
@@ -672,7 +721,7 @@ async function viewFiles(dir){
   bindTabbar(true);
 }
 async function viewFile(p){
-  app.innerHTML=`<div class="topbar"><button class="back" id="bk">‹</button><h1 style="font-size:13px">${esc(p.split(/[\\/]/).pop())}</h1></div><div class="content" id="fv"><div class="empty">加载中…</div></div>`;
+  app.innerHTML=`<div class="topbar"><button class="back" id="bk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h1 style="font-size:13px">${esc(p.split(/[\\/]/).pop())}</h1></div><div class="content" id="fv"><div class="empty">加载中…</div></div>`;
   document.getElementById('bk').onclick=()=>viewFiles(p.split(/[\\/]/).slice(0,-1).join('/')||'');
   try{ const r=await api('/api/file?path='+encodeURIComponent(p));
     document.getElementById('fv').innerHTML=`<pre class="code-view">${esc(r.content)}</pre>`;
@@ -682,9 +731,9 @@ function pathJoin(a,b){return a.replace(/[\\/]+$/,'')+'/'+b}
 
 // ---- 终端视图 ----
 function viewTerminal(){
-  app.innerHTML=`<div class="topbar"><button class="back" id="bk">‹</button><h1>终端</h1></div>
+  app.innerHTML=`<div class="topbar"><button class="back" id="bk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h1>终端</h1></div>
   <div class="content"><div class="term-out" id="out">$ 在电脑上执行命令（输出在此显示）</div></div>
-  <div class="composer"><input id="cmd" placeholder="输入命令，Enter 执行" style="font-family:monospace"><button class="send" id="run">▶</button></div>`;
+  <div class="composer"><input id="cmd" placeholder="输入命令，Enter 执行" style="font-family:ui-monospace,monospace"><button class="send" id="run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div>`;
   document.getElementById('bk').onclick=()=>{state.view='chat';render()};
   const cmd=document.getElementById('cmd'),out=document.getElementById('out');
   cmd.onkeydown=e=>{if(e.key==='Enter')runCmd()};
@@ -698,14 +747,19 @@ function viewTerminal(){
 }
 
 // ---- 底部导航 ----
+const TAB_ICONS = {
+  chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  files: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+  terminal: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',
+};
 function bindTabbar(filesView=false){
   // 仅在会话列表/聊天场景显示底部导航
   if(state.session&&!filesView) return;
   if(state.session||filesView){
     const tb=document.createElement('div');tb.className='tabbar';
-    tb.innerHTML=`<button data-v="chat" class="${state.view==='chat'?'on':''}"><span class="ico">💬</span>对话</button>
-      <button data-v="files" class="${state.view==='files'?'on':''}"><span class="ico">📁</span>文件</button>
-      <button data-v="terminal" class="${state.view==='terminal'?'on':''}"><span class="ico">⌨</span>终端</button>`;
+    tb.innerHTML=`<button data-v="chat" class="${state.view==='chat'?'on':''}"><span class="ico">${TAB_ICONS.chat}</span>对话</button>
+      <button data-v="files" class="${state.view==='files'?'on':''}"><span class="ico">${TAB_ICONS.files}</span>文件</button>
+      <button data-v="terminal" class="${state.view==='terminal'?'on':''}"><span class="ico">${TAB_ICONS.terminal}</span>终端</button>`;
     app.appendChild(tb);
     tb.querySelectorAll('button').forEach(b=>b.onclick=()=>{state.view=b.dataset.v;render()});
   }
