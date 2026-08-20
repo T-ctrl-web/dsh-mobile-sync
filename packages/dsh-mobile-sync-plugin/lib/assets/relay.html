@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -7,35 +7,36 @@
 <meta name="theme-color" content="#191919">
 <title>DSH 手机远程</title>
 <style>
-:root[data-theme="dark"]{
-  --bg:#0e1116; --bg2:#151a23; --bg3:#1d2431; --surface:#1a2029;
-  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.14);
-  --text:#e8ecf3; --muted:#8b93a7;
-  --accent:#5b8cff; --accent2:#8a6cff; --accent-soft:rgba(91,140,255,.14);
-  --ok:#34c77b; --ok-soft:rgba(52,199,123,.14);
-  --warn:#f5a623; --warn-soft:rgba(245,166,35,.14);
-  --err:#ff5f6d; --err-soft:rgba(255,95,109,.14);
-  --bubble-user:linear-gradient(135deg,#4d7cff,#7a5cff);
-  --bubble-bot:#1c2230;
-  --shadow:0 10px 34px rgba(0,0,0,.4);
-  --ring:rgba(91,140,255,.35);
-}
-:root[data-theme="light"]{
-  --bg:#f4f6fb; --bg2:#fff; --bg3:#eef1f7; --surface:#fff;
-  --border:rgba(15,23,42,.08); --border2:rgba(15,23,42,.14);
-  --text:#1a1d26; --muted:#6b7280;
-  --accent:#3b6fe0; --accent2:#6d4fe0; --accent-soft:rgba(59,111,224,.1);
-  --ok:#16a34a; --ok-soft:rgba(22,163,74,.1);
-  --warn:#d97706; --warn-soft:rgba(217,119,6,.1);
-  --err:#dc2626; --err-soft:rgba(220,38,38,.1);
-  --bubble-user:linear-gradient(135deg,#3b6fe0,#6d4fe0);
-  --bubble-bot:#fff;
-  --shadow:0 10px 26px rgba(20,30,60,.1);
-  --ring:rgba(59,111,224,.3);
+:root{
+  /* 卡通马卡龙色系：淡黄背景 + 淡蓝主色 + 淡粉渐变 */
+  --bg:#fdf6e8;           /* 奶油淡黄背景 */
+  --bg2:#fffdf7;          /* 卡片暖白 */
+  --bg3:#f6eeda;          /* 淡黄灰（次级背景） */
+  --surface:#ffffff;
+  --border:rgba(170,140,105,.16);   /* 暖棕细边框 */
+  --border2:rgba(170,140,105,.30);
+  --text:#504763;         /* 暖灰紫文字 */
+  --muted:#9388a4;
+  --accent:#7fb5ff;       /* 淡蓝 */
+  --accent2:#ff9db9;      /* 淡粉 */
+  --accent-soft:rgba(127,181,255,.16);
+  --pink-soft:rgba(255,157,185,.16);
+  --yellow-soft:rgba(255,217,122,.20);
+  --ok:#6ec99a; --ok-soft:rgba(110,201,154,.16);
+  --warn:#f0b45c; --warn-soft:rgba(240,180,92,.22);
+  --err:#ff8a95; --err-soft:rgba(255,138,149,.16);
+  --bubble-user:linear-gradient(135deg,#8cc0ff,#ffa7c2);  /* 蓝→粉渐变气泡 */
+  --bubble-bot:#fffdf6;
+  --shadow:0 8px 24px rgba(165,135,95,.14);
+  --ring:rgba(127,181,255,.4);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.55 -apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC",sans-serif;overflow:hidden}
-body{background:radial-gradient(1100px 520px at 85% -8%, var(--accent-soft), transparent 62%), var(--bg)}
+body{background:
+  radial-gradient(640px 320px at 92% -4%, var(--blue-soft,var(--accent-soft)), transparent 62%),
+  radial-gradient(520px 300px at -4% 18%, var(--pink-soft), transparent 62%),
+  radial-gradient(680px 420px at 50% 118%, var(--yellow-soft), transparent 66%),
+  var(--bg)}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
 input,textarea{font:inherit;color:inherit;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:11px 14px;width:100%;outline:none;transition:border-color .15s,box-shadow .15s}
 input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3.5px var(--ring)}
@@ -43,7 +44,14 @@ a{color:var(--accent)}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 
 /* app shell */
-#app{display:flex;flex-direction:column;height:100dvh;max-width:560px;margin:0 auto;position:relative;background:var(--bg)}
+/* 背景卡通角色装饰（原创可爱风，半透明、不拦截点击） */
+.bg-mascots{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.bg-mascots .mascot{position:absolute;opacity:.38;filter:saturate(1.05);transition:opacity .3s}
+.bg-mascots .mascot svg{width:100%;height:auto;display:block}
+.bg-mascots .m1{width:150px;left:4%;bottom:10%}
+.bg-mascots .m2{width:120px;right:6%;top:16%;transform:rotate(-6deg)}
+.bg-mascots .m3{width:140px;right:22%;bottom:3%}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:560px;margin:0 auto;position:relative;z-index:1;background:transparent}
 .topbar{display:flex;align-items:center;gap:10px;padding:10px 14px;min-height:54px;position:sticky;top:0;z-index:5;background:var(--bg2);background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);border-bottom:1px solid var(--border)}
 .topbar .back{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;color:var(--text);transition:background .12s}
 .topbar .back:active{background:var(--bg3)}
@@ -104,7 +112,7 @@ a{color:var(--accent)}
 .toolcard .tc-name{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .toolcard .tc-st{font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;flex-shrink:0}
 .toolcard .tc-st.done{color:var(--ok)}.toolcard .tc-st.fail{color:var(--err)}
-.toolcard .tc-body{padding:10px 12px;font-size:12px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted);border-top:1px solid var(--border);background:rgba(0,0,0,.16)}
+.toolcard .tc-body{padding:10px 12px;font-size:12px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-word;color:var(--muted);border-top:1px solid var(--border);background:rgba(160,120,70,.06)}
 .stream-cur{display:inline-block;width:7px;height:14px;background:var(--accent);border-radius:2px;vertical-align:-2px;animation:bl 1s steps(2) infinite}
 @keyframes bl{50%{opacity:0}}
 
@@ -169,6 +177,55 @@ a{color:var(--accent)}
 </style>
 </head>
 <body>
+<!-- 背景卡通角色装饰（原创可爱风，半透明不干扰阅读） -->
+<div class="bg-mascots" aria-hidden="true">
+  <div class="mascot m1"><svg viewBox="0 0 120 120">
+    <ellipse cx="60" cy="86" rx="36" ry="28" fill="#ffd9e6"/>
+    <circle cx="60" cy="44" r="30" fill="#ffd9e6"/>
+    <ellipse cx="36" cy="20" rx="10" ry="13" fill="#ffd9e6"/>
+    <ellipse cx="84" cy="20" rx="10" ry="13" fill="#ffd9e6"/>
+    <ellipse cx="36" cy="22" rx="5" ry="8" fill="#ffb3c6"/>
+    <ellipse cx="84" cy="22" rx="5" ry="8" fill="#ffb3c6"/>
+    <circle cx="49" cy="44" r="4.5" fill="#504763"/>
+    <circle cx="71" cy="44" r="4.5" fill="#504763"/>
+    <circle cx="51" cy="42.5" r="1.6" fill="#fff"/>
+    <circle cx="73" cy="42.5" r="1.6" fill="#fff"/>
+    <ellipse cx="40" cy="55" rx="6" ry="4" fill="#ffb3c6" opacity=".8"/>
+    <ellipse cx="80" cy="55" rx="6" ry="4" fill="#ffb3c6" opacity=".8"/>
+    <path d="M56 52 Q60 58 64 52" stroke="#504763" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M44 82 Q60 90 76 82" stroke="#ffb3c6" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>
+  </svg></div>
+  <div class="mascot m2"><svg viewBox="0 0 120 120">
+    <circle cx="60" cy="52" r="28" fill="#cde4ff"/>
+    <ellipse cx="60" cy="92" rx="34" ry="24" fill="#cde4ff"/>
+    <ellipse cx="38" cy="18" rx="9" ry="17" fill="#cde4ff"/>
+    <ellipse cx="82" cy="18" rx="9" ry="17" fill="#cde4ff"/>
+    <ellipse cx="38" cy="18" rx="5" ry="12" fill="#ffb3c6"/>
+    <ellipse cx="82" cy="18" rx="5" ry="12" fill="#ffb3c6"/>
+    <circle cx="50" cy="52" r="4.5" fill="#504763"/>
+    <circle cx="70" cy="52" r="4.5" fill="#504763"/>
+    <circle cx="52" cy="50.5" r="1.6" fill="#fff"/>
+    <circle cx="72" cy="50.5" r="1.6" fill="#fff"/>
+    <ellipse cx="42" cy="62" rx="6" ry="4" fill="#ffb3c6" opacity=".8"/>
+    <ellipse cx="78" cy="62" rx="6" ry="4" fill="#ffb3c6" opacity=".8"/>
+    <path d="M57 59 Q60 64 63 59" stroke="#504763" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle cx="60" cy="104" r="4" fill="#ffb3c6"/>
+  </svg></div>
+  <div class="mascot m3"><svg viewBox="0 0 120 120">
+    <circle cx="60" cy="58" r="34" fill="#ffe08a"/>
+    <circle cx="60" cy="58" r="34" fill="#ffe08a"/>
+    <ellipse cx="44" cy="48" rx="5" ry="7" fill="#f7d06a" transform="rotate(20 44 48)"/>
+    <ellipse cx="76" cy="48" rx="5" ry="7" fill="#f7d06a" transform="rotate(-20 76 48)"/>
+    <circle cx="50" cy="60" r="4" fill="#504763"/>
+    <circle cx="70" cy="60" r="4" fill="#504763"/>
+    <circle cx="52" cy="58.5" r="1.5" fill="#fff"/>
+    <circle cx="72" cy="58.5" r="1.5" fill="#fff"/>
+    <ellipse cx="42" cy="70" rx="6" ry="4" fill="#ffb3c6" opacity=".75"/>
+    <ellipse cx="78" cy="70" rx="6" ry="4" fill="#ffb3c6" opacity=".75"/>
+    <path d="M56 68 Q60 73 64 68" stroke="#504763" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M40 80 Q48 86 60 86 Q72 86 80 80" stroke="#f7c948" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>
+  </svg></div>
+</div>
 <div id="app"></div>
 
 <script>
